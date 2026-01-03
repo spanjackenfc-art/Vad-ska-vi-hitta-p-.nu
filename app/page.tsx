@@ -1,5 +1,8 @@
 import { supabaseServer } from "../lib/supabaseServer";
 
+const DEBUG = process.env.NEXT_PUBLIC_DEBUG === "1";
+export const dynamic = "force-dynamic";
+
 type EventRow = {
   id: string;
   title: string | null;
@@ -85,8 +88,10 @@ function buildHref(current: URLSearchParams, patch: Record<string, string>) {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const sp = (await searchParams) ?? {};
+
   const supabase = supabaseServer();
 const { data: sourcesData } = await supabase
   .from("sources")
@@ -95,10 +100,12 @@ const { data: sourcesData } = await supabase
 
 const sources = (sourcesData ?? []) as SourceRow[];
 
-  const city = firstParam(searchParams?.city).trim();
-  const category = firstParam(searchParams?.category).trim();
-  const price = firstParam(searchParams?.price).trim(); // free | paid | ""
-  const daysRaw = firstParam(searchParams?.days).trim(); // "7" etc
+const city = firstParam(sp.city).trim();
+const category = firstParam(sp.category).trim().toLowerCase();
+const price = firstParam(sp.price).trim(); // free | paid | ""
+const daysRaw = firstParam(sp.days).trim(); // "7" etc
+ // "7" etc
+console.log("[FILTER PARAMS]", { city, category, price, daysRaw });
 
   const now = new Date();
   const nowISO = now.toISOString();
@@ -145,6 +152,9 @@ const sources = (sourcesData ?? []) as SourceRow[];
   }
 
   const events = (data ?? []) as EventRow[];
+if (DEBUG) {
+  console.log("[FILTER]", { city, category, price, daysRaw, rows: events.length });
+}
 
   return (
     <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
@@ -166,12 +176,23 @@ const sources = (sourcesData ?? []) as SourceRow[];
 
             <label style={{ display: "grid", gap: 6 }}>
               <span style={{ fontSize: 12, opacity: 0.8 }}>Kategori</span>
-              <input
-                name="category"
-                defaultValue={category}
-                placeholder="familj"
-                style={{ padding: 10, borderRadius: 10, border: "1px solid #444", background: "transparent" }}
-              />
+ <select
+  name="category"
+  defaultValue={category}
+  style={{
+    padding: 10,
+    borderRadius: 10,
+    border: "1px solid #444",
+    background: "transparent",
+    color: "inherit",
+  }}
+>
+  <option value="">Alla</option>
+  <option value="familj">Familj</option>
+  <option value="kultur">Kultur</option>
+  <option value="musik">Musik</option>
+  <option value="ovrigt">Övrigt</option>
+</select>
             </label>
 
             <label style={{ display: "grid", gap: 6 }}>

@@ -42,3 +42,11 @@ next-env.d.ts
 
 # local backups
 *.bak
+
+# temp / backups
+*.bak
+*.bak.*
+scripts/debug-*.mjs
+
+# local env
+.env.local
