@@ -1,0 +1,211 @@
+diff --git a/app/_components/BottomFilterBar.tsx b/app/_components/BottomFilterBar.tsx
+index 6a944fd..4e44031 100644
+--- a/app/_components/BottomFilterBar.tsx
++++ b/app/_components/BottomFilterBar.tsx
+@@ -30,7 +30,7 @@ export default function BottomFilterBar({ cities, monthOptions }: Props) {
+ 
+   const onChange = (key: "category" | "city" | "month", value: string) => {
+     // "__ALL__" används bara för city (Hela Sverige)
+-    const v = value === "__ALL__" ? "" : value;
++    const v = (key === "city" && value === "__ALL__") ? "" : value;
+     const next = setParam(sp as any, key, v);
+     router.push(`${pathname}?${next.toString()}`);
+   };
+diff --git a/app/page.tsx b/app/page.tsx
+index 976325a..9e23aaf 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -410,18 +410,26 @@ const price = firstParam(sp.price).trim();
+   if (DEBUG) console.log("[FILTER PARAMS]", { city, category, price, month });
+ 
+   const now = new Date();
+-  const nowISO = now.toISOString();
+-
++  const nowISO = (() => {
++    const TZ = "Europe/Stockholm";
++    const fmt = new Intl.DateTimeFormat("sv-SE", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
++    const parts = fmt.formatToParts(now);
++    const y = Number(parts.find(p => p.type === "year")?.value);
++    const m = Number(parts.find(p => p.type === "month")?.value);
++    const d = Number(parts.find(p => p.type === "day")?.value);
++    return new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString();
++  })();
+   // Month filter (YYYY-MM). Default: current month.
+   const defaultMonth = String(now.getFullYear()) + "-" + String(now.getMonth() + 1).padStart(2, "0");
+   const ym = (month === "all")
+     ? "all"
+     : ((month && /^\d{4}-\d{2}$/.test(month)) ? month : defaultMonth);
+ 
+-  const y = ym === "all" ? null : Number(ym.slice(0, 4));
+-  const mm = ym === "all" ? null : Number(ym.slice(5, 7)); // 1..12
+-  const monthStartISO = (ym === "all") ? null : new Date(Date.UTC(y, mm - 1, 1, 0, 0, 0)).toISOString();
+-  const monthEndISO   = (ym === "all") ? null : new Date(Date.UTC(y, mm, 1, 0, 0, 0)).toISOString();
++  const ymAll = ym === "all";
++  const y = ymAll ? 0 : Number(ym.slice(0, 4));
++  const mm = ymAll ? 0 : Number(ym.slice(5, 7)); // 1..12
++  const monthStartISO = ymAll ? null : new Date(Date.UTC(y, mm - 1, 1, 0, 0, 0)).toISOString();
++  const monthEndISO   = ymAll ? null : new Date(Date.UTC(y, mm, 1, 0, 0, 0)).toISOString();
+ 
+   // Build deterministic month options on the server (avoids hydration mismatch in client components)
+   const buildMonthOptions = (y0: number, m0: number) => {
+@@ -444,12 +452,28 @@ const price = firstParam(sp.price).trim();
+ 
+   const monthOptions = buildMonthOptions(now.getFullYear(), now.getMonth());
+ 
++  // Count query (for pagination) — do NOT combine with range()
++  let countQ = supabase
++    .from("public_events_with_cta")
++    .select("id", { count: "exact", head: true })
++    .gte("start_at", nowISO); // hide past events
++
++  if (city) countQ = countQ.ilike("city", city);
++  if (price === "free" || price === "paid") countQ = countQ.eq("price_type", price);
++  if (monthStartISO && monthEndISO) countQ = countQ.gte("start_at", monthStartISO).lt("start_at", monthEndISO);
++  if (categoryDb) {
++    if (categoryDb === "familj") countQ = countQ.eq("audience", "familj");
++    else countQ = countQ.eq("category", categoryDb);
++  }
++
++  const { count, error: countError } = await countQ;
++
+   let q = supabase
+     .from("public_events_with_cta")
+-    .select("*", { count: "exact" })
+-        .order("start_at", { ascending: true })
+-        .order("id", { ascending: true })
++    .select("*")
+     .gte("start_at", nowISO) // hide past events
++    .order("start_at", { ascending: true })
++    .order("id", { ascending: true })
+     .range(from, to);
+ 
+   if (city) q = q.ilike("city", city);
+@@ -460,7 +484,12 @@ const price = firstParam(sp.price).trim();
+     else q = q.eq("category", categoryDb);
+   }
+ 
+-  const { data, error, count } = await q;
++  const { data, error } = await q;
++  if (DEBUG) {
++    const sample = (data || []).slice(0, 3);
++    console.log("[IMG_SAMPLE]", sample.map((e:any)=>({id:e.id,title:(e.title||"").slice(0,60), image_url:e.image_url, best: bestImageSrc(e)})));
++  }
++  const _countError = countError;
+   if (error) {
+     return (
+       <main className="min-h-screen bg-slate-50 text-slate-900 pb-24">
+@@ -503,8 +532,9 @@ const hasNext = page < totalPages;
+ 
+ 
+   // === Sponsorships (server-side) ===
+-  const nowTs = nowISO;
++  const nowTs = new Date().toISOString();
+ 
++  // 2 slots: 1) hero under hero-sektionen  2) infeed-banner längre ner
+   const { data: heroSponsRows } = await supabase
+     .from("sponsorships")
+     .select("id, package, placement, event_id, title, image_url, cta_url, starts_at, ends_at, priority, is_active")
+@@ -516,9 +546,9 @@ const hasNext = page < totalPages;
+     .limit(2);
+ 
+   const heroSponsorship = (heroSponsRows?.[0] ?? null) as any;
+-
+   const infeedSponsorship = (heroSponsRows?.[1] ?? null) as any;
+ 
++  // Topplistan (3 slots)
+   const { data: topSponsRows } = await supabase
+     .from("sponsorships")
+     .select("id, package, placement, event_id, title, image_url, cta_url, starts_at, ends_at, priority, is_active")
+@@ -531,6 +561,7 @@ const hasNext = page < totalPages;
+ 
+   const topSponsorships = (topSponsRows ?? []) as any[];
+ 
++
+   const sponsorEventIds = Array.from(
+     new Set(
+       [
+@@ -544,7 +575,8 @@ const hasNext = page < totalPages;
+   const { data: sponsorEventsRaw } = sponsorEventIds.length
+     ? await supabase
+         .from("public_events_with_cta")
+-        .select("*")
++    .select("*")
++    .gte("start_at", nowISO) // hide past events
+         .in("id", sponsorEventIds)
+     : ({ data: [] as any[] } as any);
+ 
+@@ -563,10 +595,16 @@ const hasNext = page < totalPages;
+ 
+ 
+ 
+-const INFEED_AFTER = 9; // (temporärt avstängt för hydration-stabilitet)
+-const infeedItems: any[] = [...eventsForList];
++const INFEED_AFTER = 9;
++const infeedItems: any[] = (() => {
++  const out: any[] = [...eventsForList];
++  if (infeedSponsorship && out.length > INFEED_AFTER) {
++    out.splice(INFEED_AFTER, 0, { __kind: "infeed_sponsor" });
++  }
++  return out;
++})();
+ 
+-  const topSponsored = topSponsorships
++const topSponsored = topSponsorships
+     .map((sp) => ({
+       sp,
+       ev: sponsorEventsById.get(String(sp.event_id)),
+@@ -650,8 +688,15 @@ const safeDate = (raw: string) => {
+   if (iso.includes(" ") && !iso.includes("T")) {
+     iso = iso.replace(" ", "T");
+   }
++
++  // Om timestamp saknar timezone (vanligt i views): tvinga UTC för determinism
++  // "YYYY-MM-DDTHH:MM:SS" -> "YYYY-MM-DDTHH:MM:SSZ"
++  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(iso)) {
++    iso = iso + "Z";
++  }
++
+   // "+00" -> "+00:00"
+-  if (/[+-]\d{2}$/.test(iso)) {
++  if (/[+-]\\d{2}$/.test(iso)) {
+     iso = iso + ":00";
+   }
+ 
+@@ -684,7 +729,6 @@ return (
+         <div
+           className="relative overflow-hidden rounded-3xl text-white shadow-xl aspect-[16/9] md:aspect-[21/9]"
+           style={{
+-            backgroundImage: "url('/hero/hero-vadskavihittapa-21x9.png')",
+             backgroundSize: "cover",
+             backgroundPosition: "center",
+           }}
+@@ -950,13 +994,13 @@ if (isGuidedTour && (!e.image_url || String(e.image_url).trim() === "")) {
+                       <div className="p-5 grid gap-4">
+ 
+                         
+-                        <div className="relative w-40 h-40 shrink-0 rounded-2xl overflow-hidden bg-slate-200">
++                        <div className="relative h-40 w-full overflow-hidden rounded-2xl bg-slate-200">
+                           <img
+                             src={imgSrc}
+                             alt=""
+-                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
++                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                             loading="lazy"
+-                          />
++/>
+ 
+                           {/* Datum overlay */}
+                           <div className="absolute bottom-3 left-3 rounded-2xl bg-black/75 px-3 py-2 text-white shadow-lg backdrop-blur-md">
+diff --git a/next.config.ts b/next.config.ts
+deleted file mode 100644
+index e9ffa30..0000000
+--- a/next.config.ts
++++ /dev/null
+@@ -1,7 +0,0 @@
+-import type { NextConfig } from "next";
+-
+-const nextConfig: NextConfig = {
+-  /* config options here */
+-};
+-
+-export default nextConfig;

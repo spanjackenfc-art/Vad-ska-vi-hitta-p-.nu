@@ -1,0 +1,98 @@
+diff --git a/app/_components/BottomFilterBar.tsx b/app/_components/BottomFilterBar.tsx
+index 6a944fd..d484988 100644
+--- a/app/_components/BottomFilterBar.tsx
++++ b/app/_components/BottomFilterBar.tsx
+@@ -30,7 +30,7 @@ export default function BottomFilterBar({ cities, monthOptions }: Props) {
+ 
+   const onChange = (key: "category" | "city" | "month", value: string) => {
+     // "__ALL__" används bara för city (Hela Sverige)
+-    const v = value === "__ALL__" ? "" : value;
++    const v = (key === "city" && value === "__ALL__") ? "" : (key === "month" && value === "all") ? "" : value;
+     const next = setParam(sp as any, key, v);
+     router.push(`${pathname}?${next.toString()}`);
+   };
+diff --git a/app/page.tsx b/app/page.tsx
+index 976325a..3e21cf8 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -410,8 +410,15 @@ const price = firstParam(sp.price).trim();
+   if (DEBUG) console.log("[FILTER PARAMS]", { city, category, price, month });
+ 
+   const now = new Date();
+-  const nowISO = now.toISOString();
+-
++  const nowISO = (() => {
++    const TZ = "Europe/Stockholm";
++    const fmt = new Intl.DateTimeFormat("sv-SE", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
++    const parts = fmt.formatToParts(new Date());
++    const y = Number(parts.find(p => p.type === "year")?.value);
++    const m = Number(parts.find(p => p.type === "month")?.value);
++    const d = Number(parts.find(p => p.type === "day")?.value);
++    return new Date(Date.UTC(y, m - 1, d, 0, 0, 0)).toISOString();
++  })();
+   // Month filter (YYYY-MM). Default: current month.
+   const defaultMonth = String(now.getFullYear()) + "-" + String(now.getMonth() + 1).padStart(2, "0");
+   const ym = (month === "all")
+@@ -444,12 +451,27 @@ const price = firstParam(sp.price).trim();
+ 
+   const monthOptions = buildMonthOptions(now.getFullYear(), now.getMonth());
+ 
++  // Count query (for pagination) — do NOT combine with range()
++  let countQ = supabase
++    .from("public_events_with_cta")
++    .select("id", { count: "exact", head: true })
++    .gte("start_at", nowISO); // hide past events
++
++  if (city) countQ = countQ.ilike("city", city);
++  if (price === "free" || price === "paid") countQ = countQ.eq("price_type", price);
++  if (monthStartISO && monthEndISO) countQ = countQ.gte("start_at", monthStartISO).lt("start_at", monthEndISO);
++  if (categoryDb) {
++    if (categoryDb === "familj") countQ = countQ.eq("audience", "familj");
++    else countQ = countQ.eq("category", categoryDb);
++  }
++
++  const { count, error: countError } = await countQ;
++
+   let q = supabase
+     .from("public_events_with_cta")
+-    .select("*", { count: "exact" })
+-        .order("start_at", { ascending: true })
+-        .order("id", { ascending: true })
+-    .gte("start_at", nowISO) // hide past events
++    .select("*")
++    .order("start_at", { ascending: true })
++    .order("id", { ascending: true })
+     .range(from, to);
+ 
+   if (city) q = q.ilike("city", city);
+@@ -460,7 +482,8 @@ const price = firstParam(sp.price).trim();
+     else q = q.eq("category", categoryDb);
+   }
+ 
+-  const { data, error, count } = await q;
++  const { data, error } = await q;
++  const _countError = countError;
+   if (error) {
+     return (
+       <main className="min-h-screen bg-slate-50 text-slate-900 pb-24">
+@@ -684,7 +707,6 @@ return (
+         <div
+           className="relative overflow-hidden rounded-3xl text-white shadow-xl aspect-[16/9] md:aspect-[21/9]"
+           style={{
+-            backgroundImage: "url('/hero/hero-vadskavihittapa-21x9.png')",
+             backgroundSize: "cover",
+             backgroundPosition: "center",
+           }}
+diff --git a/next.config.ts b/next.config.ts
+deleted file mode 100644
+index e9ffa30..0000000
+--- a/next.config.ts
++++ /dev/null
+@@ -1,7 +0,0 @@
+-import type { NextConfig } from "next";
+-
+-const nextConfig: NextConfig = {
+-  /* config options here */
+-};
+-
+-export default nextConfig;

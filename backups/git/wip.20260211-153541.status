@@ -1,0 +1,8 @@
+ M app/_components/BottomFilterBar.tsx
+ M app/page.tsx
+ D next.config.ts
+?? backups/
+?? lib/swedishCities.ts
+?? next.config.mjs
+?? public/hero/
+?? supabase/

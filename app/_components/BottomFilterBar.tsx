@@ -30,7 +30,7 @@ export default function BottomFilterBar({ cities, monthOptions }: Props) {
 
   const onChange = (key: "category" | "city" | "month", value: string) => {
     // "__ALL__" används bara för city (Hela Sverige)
-    const v = value === "__ALL__" ? "" : value;
+    const v = (key === "city" && value === "__ALL__") ? "" : value;
     const next = setParam(sp as any, key, v);
     router.push(`${pathname}?${next.toString()}`);
   };

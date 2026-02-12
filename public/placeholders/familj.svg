@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe4e6"/>
+      <stop offset="1" stop-color="#fecdd3"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#g)"/>
+  <circle cx="420" cy="310" r="90" fill="#be123c" opacity="0.18"/>
+  <circle cx="650" cy="280" r="70" fill="#be123c" opacity="0.18"/>
+  <circle cx="820" cy="330" r="60" fill="#be123c" opacity="0.18"/>
+  <rect x="120" y="520" width="960" height="28" rx="14" fill="#be123c" opacity="0.16"/>
+  <text x="120" y="500" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" font-size="38" fill="#881337" opacity="0.60">
+    Familj
+  </text>
+</svg>
