@@ -50,3 +50,7 @@ scripts/debug-*.mjs
 
 # local env
 .env.local
+
+# Backups (do not commit large snapshots)
+/backups/snapshots/
+/backups/snapshots/*.tgz
