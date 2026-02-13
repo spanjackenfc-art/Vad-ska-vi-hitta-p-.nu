@@ -6,7 +6,7 @@ export default function Hero() {
         <div
           className="h-44 sm:h-56 md:h-64"
           style={{
-            backgroundImage: "url('/hero/hero-vadskavihittapa-21x9.png')",
+            backgroundImage: "url('/hero/hero-vadskavihittapa-21x9.svg')",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
