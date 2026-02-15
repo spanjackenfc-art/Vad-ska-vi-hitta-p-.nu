@@ -460,7 +460,9 @@ const price = firstParam(sp.price).trim();
     .gte("start_at", nowISO); // hide past events
 
   if (city) countQ = countQ.ilike("city", city);
-  if (price === "free" || price === "paid") countQ = countQ.eq("price_type", price);
+  if (price === "free" || price === "paid") countQ = price === "free"
+      ? countQ.or("price_type.eq.free,and(price_type.eq.unknown,price_min.is.null,price_max.is.null,price_text.ilike.%25gratis%25),and(price_type.eq.unknown,price_min.is.null,price_max.is.null,price_text.ilike.%25fri%20entr%C3%A9%25)")
+      : countQ.or("price_type.eq.paid,and(price_type.eq.unknown,price_min.not.is.null),and(price_type.eq.unknown,price_max.not.is.null),and(price_type.eq.unknown,price_text.ilike.%25kr%25),and(price_type.eq.unknown,price_text.ilike.%25sek%25)");
   if (monthStartISO && monthEndISO) countQ = countQ.gte("start_at", monthStartISO).lt("start_at", monthEndISO);
   if (categoryDb) {
     if (categoryDb === "familj") countQ = countQ.eq("audience", "familj");
@@ -478,7 +480,9 @@ const price = firstParam(sp.price).trim();
     .range(from, to);
 
   if (city) q = q.ilike("city", city);
-  if (price === "free" || price === "paid") q = q.eq("price_type", price);
+  if (price === "free" || price === "paid") q = price === "free"
+      ? q.or("price_type.eq.free,and(price_type.eq.unknown,price_min.is.null,price_max.is.null,price_text.ilike.%25gratis%25),and(price_type.eq.unknown,price_min.is.null,price_max.is.null,price_text.ilike.%25fri%20entr%C3%A9%25)")
+      : q.or("price_type.eq.paid,and(price_type.eq.unknown,price_min.not.is.null),and(price_type.eq.unknown,price_max.not.is.null),and(price_type.eq.unknown,price_text.ilike.%25kr%25),and(price_type.eq.unknown,price_text.ilike.%25sek%25)");
   if (monthStartISO && monthEndISO) q = q.gte("start_at", monthStartISO).lt("start_at", monthEndISO);
   if (categoryDb) {
     if (categoryDb === "familj") q = q.eq("audience", "familj");
@@ -513,7 +517,9 @@ const price = firstParam(sp.price).trim();
     .select("city,metro_city")
     .gte("start_at", nowISO);
 
-  if (price === "free" || price === "paid") cityQ = cityQ.eq("price_type", price);
+  if (price === "free" || price === "paid") cityQ = price === "free"
+      ? cityQ.or("price_type.eq.free,and(price_type.eq.unknown,price_min.is.null,price_max.is.null,price_text.ilike.%25gratis%25),and(price_type.eq.unknown,price_min.is.null,price_max.is.null,price_text.ilike.%25fri%20entr%C3%A9%25)")
+      : cityQ.or("price_type.eq.paid,and(price_type.eq.unknown,price_min.not.is.null),and(price_type.eq.unknown,price_max.not.is.null),and(price_type.eq.unknown,price_text.ilike.%25kr%25),and(price_type.eq.unknown,price_text.ilike.%25sek%25)");
   if (monthStartISO && monthEndISO) cityQ = cityQ.gte("start_at", monthStartISO).lt("start_at", monthEndISO);
 
   // NOTE: category filter is currently not applied to main query in this file;
@@ -718,10 +724,6 @@ return (
               <div className="text-xs text-slate-600">Allt som händer. På ett ställe.</div>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600">
-            <span className="rounded-full bg-slate-100 px-2.5 py-1">MVP: Stockholm</span>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1">{sources.length} aktiva källor</span>
-          </div>
         </div>
       </header>
 
@@ -772,6 +774,76 @@ return (
       {/* Content */}
 
       <div className="mx-auto max-w-6xl px-6 py-8">
+
+        <div className="hidden lg:block fixed right-6 top-24 w-52 z-30">
+          <div className="sticky top-28">
+            <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-3 max-h-[calc(100vh-160px)] overflow-y-auto pr-1">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-sm font-semibold">Utvalt</h3>
+                <span className="text-xs text-slate-500">Tips</span>
+              </div>
+              {(() => {
+                const WANT = [
+                  "Evigt Edvin",
+                  "pappa kapsyl",
+                  "Trad On The Prom",
+                  "Bygdespelet Höga Kusten",
+                  "Djungelboken the Musical",
+                ];
+                const norm = (s: any) => String(s || "").toLowerCase().replace(/\s+/g, " ").replace(/[\"\-–—:;,.!()\[\]]/g, "").trim();
+                const want = WANT.map(norm);
+                const pool = Array.isArray(eventsForList) ? eventsForList : [];
+                const picked: any[] = [];
+                for (const e of pool) {
+                  const t = norm(e?.title);
+                  if (!t) continue;
+                  if (!want.some(w => t.includes(w))) continue;
+                  if (picked.some(x => String(x?.id) === String(e?.id))) continue;
+                  picked.push(e);
+                  if (picked.length >= 5) break;
+                }
+                if (picked.length < 5) {
+                  for (const e of pool) {
+                    if (picked.length >= 5) break;
+                    if (picked.some(x => String(x?.id) === String(e?.id))) continue;
+                    picked.push(e);
+                  }
+                }
+                return (
+                  <div className="mt-3 grid gap-3">
+                    {picked.map((e, i) => (
+                      <a
+                        key={"rail-" + String(e?.id || i)}
+                        href={String(e?.ticket_url || e?.source_url || "#")}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block rounded-xl bg-white ring-1 ring-slate-200 overflow-hidden hover:bg-slate-50"
+                      >
+                        <div className="aspect-[4/3] w-full bg-slate-200 overflow-hidden">
+                          <img
+                            src={String(bestImageSrc(e || { category: "övrigt" }))}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div className="p-1.5">
+                          <div className="text-[12px] font-semibold leading-snug text-slate-900 line-clamp-2">
+                            {String(e?.title || "")}
+                          </div>
+                          <div className="mt-0.5 text-[11px] text-slate-600 line-clamp-1">
+                            {String(e?.venue_name || e?.city || "")}
+                          </div>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+
         <div className="grid gap-6">
           
           {/* List */}
@@ -782,7 +854,7 @@ return (
               <div>
                 <div id="list" />
                 <h2 className="text-sm font-semibold">Kommande events</h2>
-                <p className="mt-1 text-xs text-slate-600">{eventsForList.length} visade (max 50)</p>
+                <p className="mt-0.5 text-[11px] text-slate-600">{eventsForList.length} visade (max 50)</p>
 
     <div className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-white p-1 ring-1 ring-slate-200">
       <a
@@ -857,7 +929,7 @@ return (
                           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Sponsrat
                           </div>
-                          <div className="mt-1 text-xs text-slate-500">
+                          <div className="mt-0.5 text-[11px] text-slate-500">
                             {String(x.sp.package || "").toUpperCase()} {String(x.sp.package || "") === "P4" ? "Partner" : "Topplista"}
                           </div>
                           <div className="mt-1 text-base font-semibold tracking-tight text-slate-900">

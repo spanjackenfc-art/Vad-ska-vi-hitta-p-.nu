@@ -1,0 +1,81 @@
+diff --git a/app/page.tsx b/app/page.tsx
+index d32d989..aabc74c 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -772,6 +772,76 @@ return (
+       {/* Content */}
+ 
+       <div className="mx-auto max-w-6xl px-6 py-8">
++
++        <div className="hidden lg:block fixed right-6 top-24 w-56 z-30">
++          <div className="sticky top-28">
++            <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-3 max-h-[calc(100vh-160px)] overflow-y-auto pr-1">
++              <div className="flex items-baseline justify-between">
++                <h3 className="text-sm font-semibold">Utvalt</h3>
++                <span className="text-xs text-slate-500">Tips</span>
++              </div>
++              {(() => {
++                const WANT = [
++                  "Evigt Edvin",
++                  "pappa kapsyl",
++                  "Trad On The Prom",
++                  "Bygdespelet Höga Kusten",
++                  "Djungelboken the Musical",
++                ];
++                const norm = (s: any) => String(s || "").toLowerCase().replace(/\s+/g, " ").replace(/[\"\-–—:;,.!()\[\]]/g, "").trim();
++                const want = WANT.map(norm);
++                const pool = Array.isArray(eventsForList) ? eventsForList : [];
++                const picked: any[] = [];
++                for (const e of pool) {
++                  const t = norm(e?.title);
++                  if (!t) continue;
++                  if (!want.some(w => t.includes(w))) continue;
++                  if (picked.some(x => String(x?.id) === String(e?.id))) continue;
++                  picked.push(e);
++                  if (picked.length >= 5) break;
++                }
++                if (picked.length < 5) {
++                  for (const e of pool) {
++                    if (picked.length >= 5) break;
++                    if (picked.some(x => String(x?.id) === String(e?.id))) continue;
++                    picked.push(e);
++                  }
++                }
++                return (
++                  <div className="mt-3 grid gap-3">
++                    {picked.map((e, i) => (
++                      <a
++                        key={"rail-" + String(e?.id || i)}
++                        href={String(e?.ticket_url || e?.source_url || "#")}
++                        target="_blank"
++                        rel="noreferrer"
++                        className="block rounded-xl bg-white ring-1 ring-slate-200 overflow-hidden hover:bg-slate-50"
++                      >
++                        <div className="aspect-[16/9] w-full bg-slate-200 overflow-hidden">
++                          <img
++                            src={String(bestImageSrc(e || { category: "övrigt" }))}
++                            alt=""
++                            className="h-full w-full object-cover"
++                            loading="lazy"
++                          />
++                        </div>
++                        <div className="p-2">
++                          <div className="text-[13px] font-semibold leading-snug text-slate-900 line-clamp-2">
++                            {String(e?.title || "")}
++                          </div>
++                          <div className="mt-1 text-xs text-slate-600 line-clamp-1">
++                            {String(e?.venue_name || e?.city || "")}
++                          </div>
++                        </div>
++                      </a>
++                    ))}
++                  </div>
++                );
++              })()}
++            </div>
++          </div>
++        </div>
++
+         <div className="grid gap-6">
+           
+           {/* List */}

@@ -1,0 +1,5 @@
+ M app/_components/Hero.tsx
+?? backups/steps/diff.20260213-082138.patch
+?? backups/steps/diff.20260213-082418.patch
+?? backups/steps/status.20260213-082138.txt
+?? backups/steps/status.20260213-082418.txt

@@ -1,0 +1,13 @@
+diff --git a/app/_components/Hero.tsx b/app/_components/Hero.tsx
+index 17005e4..c18de59 100644
+--- a/app/_components/Hero.tsx
++++ b/app/_components/Hero.tsx
+@@ -6,7 +6,7 @@ export default function Hero() {
+         <div
+           className="h-44 sm:h-56 md:h-64"
+           style={{
+-            backgroundImage: "url('/hero/hero-vadskavihittapa-21x9.png')",
++            backgroundImage: "url('/hero/hero-vadskavihittapa-21x9.svg')",
+             backgroundSize: "cover",
+             backgroundPosition: "center",
+           }}

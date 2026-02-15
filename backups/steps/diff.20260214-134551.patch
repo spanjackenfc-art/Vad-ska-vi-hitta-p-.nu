@@ -1,0 +1,24 @@
+diff --git a/app/page.tsx b/app/page.tsx
+index d32d989..ed5c6ca 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -772,6 +772,19 @@ return (
+       {/* Content */}
+ 
+       <div className="mx-auto max-w-6xl px-6 py-8">
++
++        <div className="hidden lg:block fixed right-6 top-28 w-64 z-30">
++          <div className="sticky top-28">
++            <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-3">
++              <div className="flex items-baseline justify-between">
++                <h3 className="text-sm font-semibold">Utvalt</h3>
++                <span className="text-xs text-slate-500">Tips</span>
++              </div>
++              <div className="mt-3 text-xs text-slate-600">Panel placeholder (layout-test).</div>
++            </div>
++          </div>
++        </div>
++
+         <div className="grid gap-6">
+           
+           {/* List */}
