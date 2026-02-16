@@ -112,6 +112,16 @@ function isOperaEvent(e: any) {
   return false;
 }
 
+function isWorkshopEvent(e: any) {
+  const sub = (e.subcategory ?? "").toLowerCase();
+  if (sub === "workshop" || sub === "prova_pa") return true;
+
+  const title = (e.title ?? "").toLowerCase();
+  if (title.includes("workshop") || title.includes("prova på") || title.includes("prova-pa")) return true;
+
+  return false;
+}
+
 
 function splitEventTitle(raw: string | null) {
   const t = (raw ?? "").trim();
@@ -1105,6 +1115,12 @@ if (isGuidedTour && (!e.image_url || String(e.image_url).trim() === "")) {
                             {isStandupEvent(e) ? (
                               <span className={"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 bg-slate-50 text-slate-800 ring-slate-200"}>
                                 Standup
+                              </span>
+                            ) : null}
+
+                            {isWorkshopEvent(e) ? (
+                              <span className={"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 bg-slate-50 text-slate-800 ring-slate-200"}>
+                                Workshop
                               </span>
                             ) : null}
 
