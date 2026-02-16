@@ -1,0 +1,41 @@
+diff --git a/app/page.tsx b/app/page.tsx
+index e3e4034..c10be10 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -531,6 +531,27 @@ const price = firstParam(sp.price).trim();
+ 
+ // Category filtering is applied in the DB query (keeps pagination/count deterministic)
+ const eventsForList = (eventsDeduped as EventRow[]);
++  // === Rail (sidopanel) ===
++  // Viktigt: rail ska INTE pÃ¥verkas av category-flikar.
++  let railQ = supabase
++    .from("public_events_with_cta")
++    .select("*")
++    .gte("start_at", nowISO)
++    .order("start_at", { ascending: true })
++    .limit(400);
++
++  if (city) railQ = railQ.ilike("city", city);
++  if (monthStartISO && monthEndISO) railQ = railQ.gte("start_at", monthStartISO).lt("start_at", monthEndISO);
++
++  if (price === "free") {
++    railQ = railQ.eq("price_type", "free");
++  } else if (price === "paid") {
++    railQ = railQ.or("price_type.eq.paid,and(price_type.eq.unknown,price_min.not.is.null),and(price_type.eq.unknown,price_max.not.is.null),and(price_type.eq.unknown,price_text.ilike.%25kr%25),and(price_type.eq.unknown,price_text.ilike.%25sek%25)");
++  }
++
++  const { data: railData } = await railQ;
++  const eventsForRailRaw = (railData ?? []) as EventRow[];
++  const eventsForRail = (dedupeEventsForList(eventsForRailRaw) as EventRow[]);
+ 
+ const total = count ?? 0;
+ const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+@@ -792,7 +813,7 @@ return (
+                 ];
+                 const norm = (s: any) => String(s || "").toLowerCase().replace(/\s+/g, " ").replace(/[\"\-–—:;,.!()\[\]]/g, "").trim();
+                 const want = WANT.map(norm);
+-                const pool = Array.isArray(eventsForList) ? eventsForList : [];
++                const pool = Array.isArray(eventsForRail) ? eventsForRail : [];
+                 const picked: any[] = [];
+                 for (const e of pool) {
+                   const t = norm(e?.title);

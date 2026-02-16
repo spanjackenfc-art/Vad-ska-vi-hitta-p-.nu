@@ -1,0 +1,3 @@
+ M app/page.tsx
+?? backups/steps/diff.20260215-085234.patch
+?? backups/steps/status.20260215-085234.txt

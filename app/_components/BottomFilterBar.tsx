@@ -52,6 +52,7 @@ export default function BottomFilterBar({ cities, monthOptions }: Props) {
               { v: "familj", label: "Familj" },
               { v: "teater", label: "Teater" },
               { v: "musik", label: "Musik" },
+  { v: "dans", label: "Dans" },
               { v: "standup", label: "Standup" },
               { v: "ovrigt", label: "Övrigt" },
             ] as const

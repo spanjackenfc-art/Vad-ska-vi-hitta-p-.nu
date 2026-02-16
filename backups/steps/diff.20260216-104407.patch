@@ -1,0 +1,97 @@
+diff --git a/app/_components/BottomFilterBar.tsx b/app/_components/BottomFilterBar.tsx
+index 4e44031..a36d400 100644
+--- a/app/_components/BottomFilterBar.tsx
++++ b/app/_components/BottomFilterBar.tsx
+@@ -52,6 +52,7 @@ export default function BottomFilterBar({ cities, monthOptions }: Props) {
+               { v: "familj", label: "Familj" },
+               { v: "teater", label: "Teater" },
+               { v: "musik", label: "Musik" },
++  { v: "dans", label: "Dans" },
+               { v: "standup", label: "Standup" },
+               { v: "ovrigt", label: "Övrigt" },
+             ] as const
+diff --git a/app/page.tsx b/app/page.tsx
+index e3e4034..0bb98fe 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -9,6 +9,7 @@ const CATEGORY_UI_MAP = {
+   teater: { label: "Teater", slug: "teater" }, // framtidssäker
+   familj: { label: "Familj", slug: "familj" },
+   musik: { label: "Konsert", slug: "konsert" },
++  dans: { label: "Dans", slug: "dans" },
+ };
+ 
+ import { supabaseServer } from "../lib/supabaseServer";
+@@ -143,7 +144,6 @@ function effectiveCategory(e: any) {
+   const title = (e.title ?? "").toLowerCase();
+   const venue = (e.venue_name ?? "").toLowerCase();
+   const blob = (title + " " + venue).replace(/\s+/g, " ").trim();
+-
+   const hasAny = (words: string[]) => words.some(w => blob.includes(w));
+ 
+   // Strong overrides to Övrigt (museer/visningar/utställningar etc)
+@@ -176,9 +176,10 @@ function effectiveCategory(e: any) {
+ 
+ function categoryLabel(cat: string | null) {
+   const c = (cat ?? "").toLowerCase();
+-  if (c === "familj") return "Övrigt";
++  if (c === "familj") return "Familj";
+   if (c === "kultur" || c === "teater") return "Teater";
+   if (c === "musik") return "Musik";
++  if (c === "dans") return "Dans";
+   return "Övrigt";
+ }
+ 
+@@ -188,6 +189,7 @@ function chipClass(kind: "primary" | "muted" | "cat" | "free", cat?: string | nu
+   if (kind === "cat") {
+     const c = (cat ?? "").toLowerCase();
+     if (c === "musik") return "bg-sky-50 text-sky-800 ring-sky-200";
++    if (c === "dans") return "bg-fuchsia-50 text-fuchsia-800 ring-fuchsia-200";
+     if (c === "kultur") return "bg-violet-50 text-violet-800 ring-violet-200";
+     if (c === "familj") return "bg-amber-50 text-amber-900 ring-amber-200";
+     return "bg-slate-50 text-slate-700 ring-slate-200";
+@@ -253,6 +255,7 @@ function fallbackImageForCategory(cat: string) {
+   const c = (cat || "").toLowerCase();
+   if (c === "teater" || c === "musikal") return "/placeholders/teater.svg";
+   if (c === "musik") return "/placeholders/musik.svg";
++  if (c === "dans") return "/placeholders/teater.svg";
+   if (c === "standup") return "/placeholders/standup.svg";
+   if (c === "familj") return "/placeholders/familj.svg";
+   return "/placeholders/ovrigt.svg";
+@@ -531,6 +534,27 @@ const price = firstParam(sp.price).trim();
+ 
+ // Category filtering is applied in the DB query (keeps pagination/count deterministic)
+ const eventsForList = (eventsDeduped as EventRow[]);
++  // === Rail (sidopanel) ===
++  // Viktigt: rail ska INTE pÃ¥verkas av category-flikar.
++  let railQ = supabase
++    .from("public_events_with_cta")
++    .select("*")
++    .gte("start_at", nowISO)
++    .order("start_at", { ascending: true })
++    .limit(400);
++
++  if (city) railQ = railQ.ilike("city", city);
++  if (monthStartISO && monthEndISO) railQ = railQ.gte("start_at", monthStartISO).lt("start_at", monthEndISO);
++
++  if (price === "free") {
++    railQ = railQ.eq("price_type", "free");
++  } else if (price === "paid") {
++    railQ = railQ.or("price_type.eq.paid,and(price_type.eq.unknown,price_min.not.is.null),and(price_type.eq.unknown,price_max.not.is.null),and(price_type.eq.unknown,price_text.ilike.%25kr%25),and(price_type.eq.unknown,price_text.ilike.%25sek%25)");
++  }
++
++  const { data: railData } = await railQ;
++  const eventsForRailRaw = (railData ?? []) as EventRow[];
++  const eventsForRail = (dedupeEventsForList(eventsForRailRaw) as EventRow[]);
+ 
+ const total = count ?? 0;
+ const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+@@ -792,7 +816,7 @@ return (
+                 ];
+                 const norm = (s: any) => String(s || "").toLowerCase().replace(/\s+/g, " ").replace(/[\"\-–—:;,.!()\[\]]/g, "").trim();
+                 const want = WANT.map(norm);
+-                const pool = Array.isArray(eventsForList) ? eventsForList : [];
++                const pool = Array.isArray(eventsForRail) ? eventsForRail : [];
+                 const picked: any[] = [];
+                 for (const e of pool) {
+                   const t = norm(e?.title);
