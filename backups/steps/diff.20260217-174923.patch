@@ -1,0 +1,57 @@
+diff --git a/app/page.tsx b/app/page.tsx
+index e33cb6e..d049bca 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -538,6 +538,11 @@ const price = firstParam(sp.price).trim();
+ 
+ // Category filtering is applied in the DB query (keeps pagination/count deterministic)
+ const eventsForList = (eventsDeduped as EventRow[]);
++
++  if (DEBUG) {
++    const go = (eventsForList || []).filter((e:any) => String(e?.venue_name||" ").toLowerCase().includes("göteborgsoperan")).slice(0, 12);
++    console.log("[DBG_GBG_OPERA_LIST]", go.map((e:any)=>({id:e.id,title:(e.title||"").slice(0,60), image_url:e.image_url, img: bestImageSrc(e)})));
++  }
+   // === Rail (sidopanel) ===
+   // Viktigt: rail ska INTE pÃ¥verkas av category-flikar.
+   let railQ = supabase
+@@ -880,7 +885,6 @@ return (
+ 
+             <div className="flex items-end justify-between">
+               <div>
+-                <div id="list" />
+                 <h2 className="text-sm font-semibold">Kommande events</h2>
+                 <p className="mt-0.5 text-[11px] text-slate-600">{eventsForList.length} visade (max 50)</p>
+ 
+diff --git a/scripts/import-sources.mjs b/scripts/import-sources.mjs
+index 75f9890..8414b66 100644
+--- a/scripts/import-sources.mjs
++++ b/scripts/import-sources.mjs
+@@ -383,6 +383,28 @@ async function cacheImageToStorage(originalUrl) {
+   const ab = await res.arrayBuffer();
+   const buf = Buffer.from(ab);
+ 
++  // Guard: do NOT cache HTML/error pages as images
++  const sigHex = buf.slice(0, 16).toString("hex");
++
++  const isJpg = sigHex.startsWith("ffd8ff");
++  const isPng = sigHex.startsWith("89504e470d0a1a0a");
++  const isGif =
++    buf.slice(0, 6).toString("ascii") === "GIF87a" ||
++    buf.slice(0, 6).toString("ascii") === "GIF89a";
++  const isWebp =
++    buf.slice(0, 4).toString("ascii") === "RIFF" &&
++    buf.slice(8, 12).toString("ascii") === "WEBP";
++
++  const looksLikeImage = isJpg || isPng || isGif || isWebp;
++  const isHtmlLike =
++    ct.includes("text/html") ||
++    ct.includes("application/xhtml") ||
++    ct.includes("application/xml");
++
++  if (!ct.startsWith("image/") || isHtmlLike || !looksLikeImage) {
++    throw new Error(`image_not_image ${ct || "no_ct"}`);
++  }
++
+   // MVP-guard: max 6MB
+   if (buf.length > 6 * 1024 * 1024) throw new Error("image_too_large");
+ 

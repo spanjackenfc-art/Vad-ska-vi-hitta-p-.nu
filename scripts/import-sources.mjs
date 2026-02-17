@@ -383,6 +383,28 @@ async function cacheImageToStorage(originalUrl) {
   const ab = await res.arrayBuffer();
   const buf = Buffer.from(ab);
 
+  // Guard: do NOT cache HTML/error pages as images
+  const sigHex = buf.slice(0, 16).toString("hex");
+
+  const isJpg = sigHex.startsWith("ffd8ff");
+  const isPng = sigHex.startsWith("89504e470d0a1a0a");
+  const isGif =
+    buf.slice(0, 6).toString("ascii") === "GIF87a" ||
+    buf.slice(0, 6).toString("ascii") === "GIF89a";
+  const isWebp =
+    buf.slice(0, 4).toString("ascii") === "RIFF" &&
+    buf.slice(8, 12).toString("ascii") === "WEBP";
+
+  const looksLikeImage = isJpg || isPng || isGif || isWebp;
+  const isHtmlLike =
+    ct.includes("text/html") ||
+    ct.includes("application/xhtml") ||
+    ct.includes("application/xml");
+
+  if (!ct.startsWith("image/") || isHtmlLike || !looksLikeImage) {
+    throw new Error(`image_not_image ${ct || "no_ct"}`);
+  }
+
   // MVP-guard: max 6MB
   if (buf.length > 6 * 1024 * 1024) throw new Error("image_too_large");
 
@@ -1515,7 +1537,11 @@ if (parser === "html" || HTML_PARSERS[parser]) {
   console.log(`Klart. Totalt upsertade ${total} events.`);
 }
 
-run().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+
+// Run only when executed directly
+if (process.argv[1] && process.argv[1].endsWith("scripts/import-sources.mjs")) {
+  run().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

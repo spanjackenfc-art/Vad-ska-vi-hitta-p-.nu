@@ -538,6 +538,11 @@ const price = firstParam(sp.price).trim();
 
 // Category filtering is applied in the DB query (keeps pagination/count deterministic)
 const eventsForList = (eventsDeduped as EventRow[]);
+
+  if (DEBUG) {
+    const go = (eventsForList || []).filter((e:any) => String(e?.venue_name||" ").toLowerCase().includes("göteborgsoperan")).slice(0, 12);
+    console.log("[DBG_GBG_OPERA_LIST]", go.map((e:any)=>({id:e.id,title:(e.title||"").slice(0,60), image_url:e.image_url, img: bestImageSrc(e)})));
+  }
   // === Rail (sidopanel) ===
   // Viktigt: rail ska INTE pÃ¥verkas av category-flikar.
   let railQ = supabase
@@ -880,7 +885,6 @@ return (
 
             <div className="flex items-end justify-between">
               <div>
-                <div id="list" />
                 <h2 className="text-sm font-semibold">Kommande events</h2>
                 <p className="mt-0.5 text-[11px] text-slate-600">{eventsForList.length} visade (max 50)</p>
 
