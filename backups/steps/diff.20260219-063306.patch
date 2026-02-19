@@ -1,0 +1,13 @@
+diff --git a/scripts/parsers/goteborgsoperan_html.mjs b/scripts/parsers/goteborgsoperan_html.mjs
+index 91f99b3..35d4e49 100644
+--- a/scripts/parsers/goteborgsoperan_html.mjs
++++ b/scripts/parsers/goteborgsoperan_html.mjs
+@@ -18,6 +18,8 @@ export default async function parse({ html, source }){
+     while((m=re.exec(h))){
+       const href=(m[1]||"").trim();
+       const title=stripTags(m[2]||"");
++      const imgMatch = String(m[2]||"").match(/<img[^>]+src=\"([^\"]+)\"/i);
++      const image_url = imgMatch ? String(imgMatch[1]).trim() : null;
+       const start_at=parseFirstDate(m[3]||"");
+       if(!title||!start_at) continue;
+       const abs=href.startsWith("http")?href:href;
