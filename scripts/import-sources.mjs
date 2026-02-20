@@ -1473,7 +1473,8 @@ if (parser === "html" || HTML_PARSERS[parser]) {
     await logIngestionRun({
         source: s,
         parser: key,
-        startedAtISO: new Date(t0).toISOString(),\n        finishedAtISO,
+        startedAtISO: new Date(t0).toISOString(),
+        finishedAtISO,
           durationMs: ms,
           upsertedCount: n,
           success: true,
@@ -1481,7 +1482,8 @@ if (parser === "html" || HTML_PARSERS[parser]) {
     });
 
     await updateSourceHealth({
-        source: s,\n        finishedAtISO,
+        source: s,
+        finishedAtISO,
           durationMs: ms,
           upsertedCount: n,
           success: true,
@@ -1495,7 +1497,8 @@ if (parser === "html" || HTML_PARSERS[parser]) {
     await logIngestionRun({
         source: s,
         parser: key,
-        startedAtISO: new Date(t0).toISOString(),\n        finishedAtISO,
+        startedAtISO: new Date(t0).toISOString(),
+        finishedAtISO,
           durationMs: ms,
           upsertedCount: 0,
           success: false,
@@ -1503,7 +1506,8 @@ if (parser === "html" || HTML_PARSERS[parser]) {
     });
 
     await updateSourceHealth({
-        source: s,\n        finishedAtISO,
+        source: s,
+        finishedAtISO,
           durationMs: ms,
           upsertedCount: 0,
           success: false,
