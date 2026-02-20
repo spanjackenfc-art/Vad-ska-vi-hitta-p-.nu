@@ -57,3 +57,7 @@ scripts/debug-*.mjs
 
 # local step backups
 backups/steps/
+
+# local snapshots (never commit)
+backups/snapshots/
+*.tgz
