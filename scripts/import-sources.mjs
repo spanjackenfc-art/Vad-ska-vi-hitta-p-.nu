@@ -5,6 +5,7 @@ dotenv.config({ path: ".env.local" });
 import ical from "ical";
 import * as cheerio from "cheerio";
 import { HTML_PARSERS } from "./parsers/router.mjs";
+import { importTicketmasterApi } from "./parsers/ticketmaster_api.mjs";
 import { importTickster } from "./parsers/tickster_html.mjs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -1304,8 +1305,59 @@ async function run() {
 }
     continue;
 }
+    if (parser === "ticketmaster_api") {
+      try {
+        const n = await importTicketmasterApi(s);
+        const ms = Date.now() - t0;
+        console.log("✅ [API] " + s.name + ": " + n + " (" + ms + " ms)");
+        total += n;
 
-    
+        const finishedAtISO = new Date().toISOString();
+        await logIngestionRun({
+          source: s,
+          parser: "ticketmaster_api",
+          startedAtISO: new Date(t0).toISOString(),
+          finishedAtISO,
+          durationMs: ms,
+          upsertedCount: n,
+          success: true,
+          errorMessage: null,
+        });
+        await updateSourceHealth({
+          source: s,
+          finishedAtISO,
+          durationMs: ms,
+          upsertedCount: n,
+          success: true,
+          errorMessage: null,
+        });
+      } catch (e) {
+        const ms = Date.now() - t0;
+        console.log("❌ [API] " + s.name + ": " + e.message + " (" + ms + " ms)");
+
+        const finishedAtISO = new Date().toISOString();
+        await logIngestionRun({
+          source: s,
+          parser: "ticketmaster_api",
+          startedAtISO: new Date(t0).toISOString(),
+          finishedAtISO,
+          durationMs: ms,
+          upsertedCount: 0,
+          success: false,
+          errorMessage: e.message,
+        });
+        await updateSourceHealth({
+          source: s,
+          finishedAtISO,
+          durationMs: ms,
+          upsertedCount: 0,
+          success: false,
+          errorMessage: e.message,
+        });
+      }
+      continue;
+    }
+
     if (parser === "tickster_html") {
       try {
         const items = await importTickster(s);
