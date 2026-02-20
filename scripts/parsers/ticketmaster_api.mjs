@@ -3,6 +3,24 @@
  *
  * Returns: Array<{ title, start_at, end_at?, city?, venue_name?, ticket_url?, source_url?, image_url?, price_min?, price_max? }>
  */
+function shouldIncludeTicketmasterEvent(ev) {
+  const title = String(ev?.name || "").trim();
+  const t = title.toLowerCase();
+
+  // Drop obvious junk/test/internal
+  const junk = ["do not purchase", "do not purchases", "test", "qa", "dummy", "internal"];
+  if (junk.some(x => t.includes(x))) return false;
+
+  // Drop clearly non-family stuff that leaks into "family"
+  const nonFamily = ["beer", "öl", "ol", "ölmässa", "olmassa", "expo", "mässa", "massa", "vin", "whisky"];
+  if (nonFamily.some(x => t.includes(x))) return false;
+
+  // Require a usable date
+  const startISO = ev?.dates?.start?.dateTime || null;
+  if (!startISO) return false;
+
+  return true;
+}
 
 export async function importTicketmasterApi(source) {
   const apiKey = process.env.TICKETMASTER_API_KEY;
@@ -25,7 +43,8 @@ export async function importTicketmasterApi(source) {
   }
 
   const json = await res.json();
-  const events = json?._embedded?.events || [];
+  const eventsRaw = json?._embedded?.events || [];
+  const events = eventsRaw.filter(shouldIncludeTicketmasterEvent);
 
   const items = events.map(ev => {
     const startISO = ev?.dates?.start?.dateTime || null;
