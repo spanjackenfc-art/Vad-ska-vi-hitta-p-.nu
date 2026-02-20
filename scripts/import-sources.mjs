@@ -5,7 +5,6 @@ dotenv.config({ path: ".env.local" });
 import ical from "ical";
 import * as cheerio from "cheerio";
 import { HTML_PARSERS } from "./parsers/router.mjs";
-import { importTicketmasterApi } from "./parsers/ticketmaster_api.mjs";
 import { importTickster } from "./parsers/tickster_html.mjs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -1262,102 +1261,49 @@ async function run() {
       total += n;
         const finishedAtISO = new Date().toISOString();
         await logIngestionRun({
-          source: s,
-          parser: "ics",
-          startedAtISO: new Date(t0).toISOString(),
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: n,
-          success: true,
-          errorMessage: null,
+            source: s,
+            parser: "ics",
+            startedAtISO: new Date(t0).toISOString(),
+            finishedAtISO,
+              durationMs: ms,
+              upsertedCount: n,
+              success: true,
+              errorMessage: null,
         });
         await updateSourceHealth({
-          source: s,
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: n,
-          success: true,
-          errorMessage: null,
-        });
-} catch (e) {
-      const ms = Date.now() - t0;
-      console.log(`❌ [ICS] ${s.name}: ${e.message} (${ms} ms)`);
-    
-        const finishedAtISO = new Date().toISOString();
-        await logIngestionRun({
-          source: s,
-          parser: "ics",
-          startedAtISO: new Date(t0).toISOString(),
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: 0,
-          success: false,
-          errorMessage: e.message,
-        });
-        await updateSourceHealth({
-          source: s,
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: 0,
-          success: false,
-          errorMessage: e.message,
-        });
-}
-    continue;
-}
-    if (parser === "ticketmaster_api") {
-      try {
-        const n = await importTicketmasterApi(s);
-        const ms = Date.now() - t0;
-        console.log("✅ [API] " + s.name + ": " + n + " (" + ms + " ms)");
-        total += n;
-
-        const finishedAtISO = new Date().toISOString();
-        await logIngestionRun({
-          source: s,
-          parser: "ticketmaster_api",
-          startedAtISO: new Date(t0).toISOString(),
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: n,
-          success: true,
-          errorMessage: null,
-        });
-        await updateSourceHealth({
-          source: s,
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: n,
-          success: true,
-          errorMessage: null,
+            source: s,
+            finishedAtISO,
+              durationMs: ms,
+              upsertedCount: n,
+              success: true,
+              errorMessage: null,
         });
       } catch (e) {
         const ms = Date.now() - t0;
-        console.log("❌ [API] " + s.name + ": " + e.message + " (" + ms + " ms)");
-
+        console.log(`❌ [ICS] ${s.name}: ${e.message} (${ms} ms)`);
+        
         const finishedAtISO = new Date().toISOString();
         await logIngestionRun({
           source: s,
-          parser: "ticketmaster_api",
+          parser: "ics",
           startedAtISO: new Date(t0).toISOString(),
           finishedAtISO,
-          durationMs: ms,
-          upsertedCount: 0,
-          success: false,
-          errorMessage: e.message,
+            durationMs: ms,
+            upsertedCount: 0,
+            success: false,
+            errorMessage: e.message,
         });
         await updateSourceHealth({
           source: s,
           finishedAtISO,
-          durationMs: ms,
-          upsertedCount: 0,
-          success: false,
-          errorMessage: e.message,
+            durationMs: ms,
+            upsertedCount: 0,
+            success: false,
+            errorMessage: e.message,
         });
       }
       continue;
     }
-
     if (parser === "tickster_html") {
       try {
         const items = await importTickster(s);
@@ -1374,8 +1320,8 @@ async function run() {
             title: e.title || "Untitled event",
             description: null,
             category: inferGenreCategory({ source: s, it }) ?? null,
-          audience: inferAudience({ source: s, it }),
-          subcategory: it.subcategory ?? inferSubcategory({ source: s, it }) ?? null,
+            audience: inferAudience({ source: s, it }),
+            subcategory: it.subcategory ?? inferSubcategory({ source: s, it }) ?? null,
             start_at: e.start_at,
             end_at: e.end_at ?? null,
             city: s.city ?? "Stockholm",
@@ -1398,22 +1344,22 @@ async function run() {
 
         const finishedAtISO = new Date().toISOString();
         await logIngestionRun({
-          source: s,
-          parser: "tickster_html",
-          startedAtISO: new Date(t0).toISOString(),
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: n,
-          success: true,
-          errorMessage: null,
+            source: s,
+            parser: "tickster_html",
+            startedAtISO: new Date(t0).toISOString(),
+            finishedAtISO,
+              durationMs: ms,
+              upsertedCount: n,
+              success: true,
+              errorMessage: null,
         });
         await updateSourceHealth({
-          source: s,
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: n,
-          success: true,
-          errorMessage: null,
+            source: s,
+            finishedAtISO,
+              durationMs: ms,
+              upsertedCount: n,
+              success: true,
+              errorMessage: null,
         });
       } catch (e) {
         const ms = Date.now() - t0;
@@ -1421,22 +1367,22 @@ async function run() {
 
         const finishedAtISO = new Date().toISOString();
         await logIngestionRun({
-          source: s,
-          parser: "tickster_html",
-          startedAtISO: new Date(t0).toISOString(),
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: 0,
-          success: false,
-          errorMessage: e.message,
+            source: s,
+            parser: "tickster_html",
+            startedAtISO: new Date(t0).toISOString(),
+            finishedAtISO,
+              durationMs: ms,
+              upsertedCount: 0,
+              success: false,
+              errorMessage: e.message,
         });
         await updateSourceHealth({
-          source: s,
-          finishedAtISO,
-          durationMs: ms,
-          upsertedCount: 0,
-          success: false,
-          errorMessage: e.message,
+            source: s,
+            finishedAtISO,
+              durationMs: ms,
+              upsertedCount: 0,
+              success: false,
+              errorMessage: e.message,
         });
       }
       continue;
@@ -1492,8 +1438,8 @@ if (parser === "html" || HTML_PARSERS[parser]) {
           title: it.title || "Untitled event",
           description: it.description || null,
           category: inferGenreCategory({ source: s, it }) ?? null,
-          audience: inferAudience({ source: s, it }),
-          subcategory: it.subcategory ?? inferSubcategory({ source: s, it }) ?? null,
+            audience: inferAudience({ source: s, it }),
+            subcategory: it.subcategory ?? inferSubcategory({ source: s, it }) ?? null,
           start_at: startISO,
           end_at: it.end_at || null,
           city: it.city || s.city || null,
@@ -1525,23 +1471,21 @@ if (parser === "html" || HTML_PARSERS[parser]) {
 
     const finishedAtISO = new Date().toISOString();
     await logIngestionRun({
-      source: s,
-      parser: key,
-      startedAtISO: new Date(t0).toISOString(),
-      finishedAtISO,
-      durationMs: ms,
-      upsertedCount: n,
-      success: true,
-      errorMessage: null,
+        source: s,
+        parser: key,
+        startedAtISO: new Date(t0).toISOString(),\n        finishedAtISO,
+          durationMs: ms,
+          upsertedCount: n,
+          success: true,
+          errorMessage: null,
     });
 
     await updateSourceHealth({
-      source: s,
-      finishedAtISO,
-      durationMs: ms,
-      upsertedCount: n,
-      success: true,
-      errorMessage: null,
+        source: s,\n        finishedAtISO,
+          durationMs: ms,
+          upsertedCount: n,
+          success: true,
+          errorMessage: null,
     });
   } catch (e) {
     const ms = Date.now() - t0;
@@ -1549,23 +1493,21 @@ if (parser === "html" || HTML_PARSERS[parser]) {
 
     const finishedAtISO = new Date().toISOString();
     await logIngestionRun({
-      source: s,
-      parser: key,
-      startedAtISO: new Date(t0).toISOString(),
-      finishedAtISO,
-      durationMs: ms,
-      upsertedCount: 0,
-      success: false,
-      errorMessage: e.message,
+        source: s,
+        parser: key,
+        startedAtISO: new Date(t0).toISOString(),\n        finishedAtISO,
+          durationMs: ms,
+          upsertedCount: 0,
+          success: false,
+          errorMessage: e.message,
     });
 
     await updateSourceHealth({
-      source: s,
-      finishedAtISO,
-      durationMs: ms,
-      upsertedCount: 0,
-      success: false,
-      errorMessage: e.message,
+        source: s,\n        finishedAtISO,
+          durationMs: ms,
+          upsertedCount: 0,
+          success: false,
+          errorMessage: e.message,
     });
   }
 
@@ -1581,7 +1523,7 @@ if (parser === "html" || HTML_PARSERS[parser]) {
       .slice(0, 6);
     console.log("[IMG_CACHE_SUMMARY]", {
       attempts: IMG_CACHE_ATTEMPTS,
-      success: IMG_CACHE_SUCCESS,
+          success: IMG_CACHE_SUCCESS,
       fail: IMG_CACHE_FAIL,
       topErrors: top,
     });

@@ -20,8 +20,10 @@ import { importTeaterbusAktuellt } from "./teaterbus_aktuellt_html.mjs";
 import { importIntimanForestallningar } from "./intiman_forestallningar_html.mjs";
 import { importOrionPaScen } from "./orion_pa_scen_html.mjs";
 import { importPygmeSpelprogramHtml } from "./pygme_spelprogram_html.mjs";
+import { importTicketmasterApi } from "./ticketmaster_api.mjs";
 
 export const HTML_PARSERS = {
+  ticketmaster_api: importTicketmasterApi,
   pygme_spelprogram_html: importPygmeSpelprogramHtml,
   showtic_html: showtic_html,
   malmoopera_html: malmoopera_html,
