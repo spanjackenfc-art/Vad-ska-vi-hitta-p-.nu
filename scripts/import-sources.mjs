@@ -487,7 +487,7 @@ async function upsertEventPrefer(source, payload) {
       insertPayload.image_cached_at = insertPayload.image_cached_at || null;
     }
 
-    const { error: insErr } = await supabase.from("events").insert(insertPayload);
+    const { error: insErr } = await supabase.from("events").upsert(insertPayload, { onConflict: "fingerprint" });
     if (insErr) throw insErr;
     return;
   }
