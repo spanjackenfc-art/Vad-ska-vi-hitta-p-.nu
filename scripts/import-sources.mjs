@@ -75,6 +75,11 @@ function inferAudience({ source, it }) {
   if (/\b\d{1,2}\s*[–-]\s*\d{1,2}\s*år\b/i.test(blob)) return "familj";
   if (/\b(0\s*[–-]\s*3|3\s*[–-]\s*6|4\s*[–-]\s*8|6\s*[–-]\s*12)\b/i.test(blob)) return "familj";
 
+  // Title-keywords: strong family brands/acts (keep list short + high-signal)
+  if (/\b(arne\s+alligator|pappa\s+kapsyl|babblarna|bolibompa|bamse|alfons|pettson|findus|pippi|mamma\s+mu)\b/i.test(blob)) return "familj";
+  // Generic high-signal
+  if (/\bbarnteater\b/i.test(blob)) return "familj";
+
   return null;
 }
 
@@ -1319,9 +1324,9 @@ async function run() {
             fingerprint,
             title: e.title || "Untitled event",
             description: null,
-            category: inferGenreCategory({ source: s, it }) ?? null,
-            audience: inferAudience({ source: s, it }),
-            subcategory: it.subcategory ?? inferSubcategory({ source: s, it }) ?? null,
+            category: inferGenreCategory({ source: s, it: e }) ?? null,
+            audience: inferAudience({ source: s, it: e }),
+            subcategory: e.subcategory ?? inferSubcategory({ source: s, it: e }) ?? null,
             start_at: e.start_at,
             end_at: e.end_at ?? null,
             city: s.city ?? "Stockholm",
@@ -1424,21 +1429,24 @@ if (parser === "html" || HTML_PARSERS[parser]) {
         if (t > now + maxFutureMs) continue;
 
         const startISO = new Date(t).toISOString();
+        const title = it.title || "Untitled event";
+        const aud = inferAudience({ source: s, it: { ...it, title } });
+
         const ticket = it.ticket_url || null;
         const src = it.source_url || s.url;
 
         const ticketKey = clean(ticket || src) || "";
-        const fingerprint = `${s.id}__${ticket || src}__${startISO}__${ticketKey}__${normalizeTitleForKey(it.title)}`;
+        const fingerprint = `${s.id}__${ticket || src}__${startISO}__${ticketKey}__${normalizeTitleForKey(title)}`;
 
         await upsertEventPrefer(s, {
           source_id: s.id,
           source_rank: sourceRank(s),
-          canonical_key: canonicalKeyFor({ title: it.title || "Untitled event", startISO, city: (it.city || s.city || null) }),
+          canonical_key: canonicalKeyFor({ title, startISO, city: (it.city || s.city || null) }),
           fingerprint,
-          title: it.title || "Untitled event",
+          title: title,
           description: it.description || null,
           category: inferGenreCategory({ source: s, it }) ?? null,
-            audience: inferAudience({ source: s, it }),
+            audience: aud,
             subcategory: it.subcategory ?? inferSubcategory({ source: s, it }) ?? null,
           start_at: startISO,
           end_at: it.end_at || null,
