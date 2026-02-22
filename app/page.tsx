@@ -431,7 +431,9 @@ const price = firstParam(sp.price).trim();
   const defaultMonth = String(now.getFullYear()) + "-" + String(now.getMonth() + 1).padStart(2, "0");
   const ym = (month === "all")
     ? "all"
-    : ((month && /^\d{4}-\d{2}$/.test(month)) ? month : defaultMonth);
+    : (((!month) && categoryDb === "familj")
+        ? "all"
+        : ((month && /^\d{4}-\d{2}$/.test(month)) ? month : defaultMonth));
 
   const ymAll = ym === "all";
   const y = ymAll ? 0 : Number(ym.slice(0, 4));
