@@ -70,7 +70,12 @@ function inferAudience({ source, it }) {
 
   // Strong family signals
   if (/(\bbarn\b|\bfamilj\b|\bbarn\s*och\s*familj\b)/i.test(blob)) return "familj";
-  if (/\b(förskola|forskola|skola|fritids)\b/i.test(blob)) return "familj";
+  // NOTE: "skola/förskola/fritids" alone is too broad (adult talks can mention school).
+  // Require child-context before classifying as familj.
+  if (/\b(förskola|forskola|skola|fritids)\b/i.test(blob)) {
+    if (/\b(barn|familj)\b/i.test(blob)) return "familj";
+    if (/\b(för\s*barn|barnteater)\b/i.test(blob)) return "familj";
+  }
   if (/\bfrån\s*\d{1,2}\s*år\b/i.test(blob)) return "familj";
   if (/\b\d{1,2}\s*[–-]\s*\d{1,2}\s*år\b/i.test(blob)) return "familj";
   if (/\b(0\s*[–-]\s*3|3\s*[–-]\s*6|4\s*[–-]\s*8|6\s*[–-]\s*12)\b/i.test(blob)) return "familj";
