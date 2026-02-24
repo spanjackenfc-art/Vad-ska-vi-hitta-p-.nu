@@ -837,13 +837,6 @@ return (
                   picked.push(e);
                   if (picked.length >= 5) break;
                 }
-                if (picked.length < 5) {
-                  for (const e of pool) {
-                    if (picked.length >= 5) break;
-                    if (picked.some(x => String(x?.id) === String(e?.id))) continue;
-                    picked.push(e);
-                  }
-                }
                 return (
                   <div className="mt-3 grid gap-3">
                     {picked.map((e, i) => (
