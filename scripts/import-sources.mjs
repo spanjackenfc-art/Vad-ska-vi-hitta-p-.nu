@@ -256,6 +256,7 @@ function isBlockedImageUrl(u) {
     const path = (url.pathname || "").toLowerCase();
     // Never accept Barnistan as image source (logos/share images)
     if (host.endsWith("barnistan.se")) return true;
+    if (host.endsWith("pygmeteatern.se") && path.includes("/img/common/")) return true;
     // Common "logo/default/share" patterns (keep conservative)
     if (lower.includes("barnistan") && (lower.includes("logo") || lower.includes("default") || lower.includes("share"))) return true;
     // ICS/calendar/share pages should never be images
