@@ -585,6 +585,26 @@ const eventsForList = (eventsDeduped as EventRow[]);
   const featuredById = new Map<string, any>((featuredRaw ?? []).map((e: any) => [String(e.id), e]));
   const featuredEvents = FEATURED_IDS.map((id) => featuredById.get(String(id))).filter(Boolean);
 
+  // === Rail (sidopanel) — LOCKED / curated (never changes with filters) ===
+  const RAIL_IDS = [
+    // TODO: replace/curate freely, order is respected
+    "740ec753-3c49-437d-9185-7cee21ca1493", // Evigt Edvin
+    "e0d85a4a-50da-4f56-81c7-1ecc1174b51e", // Sweet sixteen
+    "3b0cf550-dc03-47ac-88d2-c3ae7ecf2aec", // Trad On The Prom
+    "5459b412-2694-4996-a30c-430c68a7cbd7", // Pappa Kapsyl
+    "91203abb-759e-441d-af87-b82e110799b7", // Bygdespelet Hoga Kusten
+  ];
+
+  const { data: railPinnedRaw } = await supabase
+    .from("public_events_with_cta")
+    .select("*")
+    .gte("start_at", nowISO)
+    .in("id", RAIL_IDS);
+
+  const railPinnedById = new Map<string, any>((railPinnedRaw ?? []).map((e: any) => [String(e.id), e]));
+  const railPinnedEvents = RAIL_IDS.map((id) => railPinnedById.get(String(id))).filter(Boolean);
+
+
 
 const total = count ?? 0;
 const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -652,18 +672,7 @@ const hasNext = page < totalPages;
   const infeedEvent = infeedSponsorship?.event_id
     ? (sponsorEventsById.get(String(infeedSponsorship.event_id)) ?? null)
     : null;
-
-
-
-
-const INFEED_AFTER = 9;
-const infeedItems: any[] = (() => {
-  const out: any[] = [...eventsForList];
-  if (infeedSponsorship && out.length > INFEED_AFTER) {
-    out.splice(INFEED_AFTER, 0, { __kind: "infeed_sponsor" });
-  }
-  return out;
-})();
+  const infeedItems: any[] = [...eventsForList];
 
 const topSponsored = topSponsorships
     .map((sp) => ({
@@ -837,13 +846,57 @@ return (
                 <span className="text-xs text-slate-500">Tips</span>
               </div>
               {(() => {
-                const picked: any[] = Array.isArray(featuredEvents) ? featuredEvents : [];
+                const picked: any[] = Array.isArray(railPinnedEvents) ? [...railPinnedEvents] : [];
+                const seen = new Set(picked.map((e:any)=>String(e?.id)));
+
+                // Fill from sponsored (top list)
+                if (picked.length < 5 && Array.isArray(topSponsored)) {
+                  for (const x of topSponsored) {
+                    const ev = x?.ev;
+                    if (!ev) continue;
+                    const id = String(ev?.id);
+                    if (!id || seen.has(id)) continue;
+                    picked.push(ev);
+                    seen.add(id);
+                    if (picked.length >= 5) break;
+                  }
+                }
+
+                // Fill from rail pool (future events)
+                if (picked.length < 5) {
+                  const pool2 = Array.isArray(eventsForRail) ? eventsForRail : [];
+                  for (const ev of pool2) {
+                    const id = String(ev?.id);
+                    if (!id || seen.has(id)) continue;
+                    picked.push(ev);
+                    seen.add(id);
+                    if (picked.length >= 5) break;
+                  }
+                }
+
+
+                // Final fill from current page list (deterministic fallback)
+                if (picked.length < 5) {
+                  const pool3 = Array.isArray(eventsForList) ? eventsForList : [];
+                  for (const ev of pool3) {
+                    const id = String(ev?.id);
+                    if (!id || seen.has(id)) continue;
+                    picked.push(ev);
+                    seen.add(id);
+                    if (picked.length >= 5) break;
+                  }
+                }
+
+
+                if (DEBUG) {
+                  console.log("[DBG_FEATURED_PICKED]", picked.map((e:any)=>({id:e?.id,title:e?.title,city:e?.city,venue:e?.venue_name,img:e?.image_url}))); 
+                }
                 return (
                   <div className="mt-3 grid gap-3">
                     {picked.map((e, i) => (
                       <a
                         key={"rail-" + String(e?.id || i)}
-                        href={String(e?.ticket_url || e?.source_url || "#")}
+                        href={String(primaryCtaUrl(e) || "#")}
                         target="_blank"
                         rel="noreferrer"
                         className="block rounded-xl bg-white ring-1 ring-slate-200 overflow-hidden hover:bg-slate-50"
