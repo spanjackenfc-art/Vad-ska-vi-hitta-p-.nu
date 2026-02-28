@@ -30,6 +30,7 @@ export const HTML_PARSERS = {
   malmostadsteater_html: malmostadsteater_html,
   goteborgsoperan_html: goteborgsoperan_html,
   html: html,
+  nortic_event_html: html,
   musikal_html: html,
   o2scenkonst_html: html,
   tickster_html: importTickster,

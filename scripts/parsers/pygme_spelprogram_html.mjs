@@ -5,10 +5,15 @@ function clean(s) {
 }
 
 function absUrl(base, href) {
-  if (!href) return null;
-  if (href.startsWith("http")) return href;
-  if (href.startsWith("/")) return new URL(href, base).toString();
-  return new URL("/" + href, base).toString();
+  try {
+    if (!href) return null;
+    const h = String(href).trim();
+    if (!h) return null;
+    if (h.startsWith("http")) return h;
+    return new URL(h, base).toString();
+  } catch {
+    return null;
+  }
 }
 
 function parseTimeCell(text) {
@@ -65,7 +70,8 @@ export async function importPygmeSpelprogramHtml(source) {
 
   const res = await fetch(source.url, { redirect: "follow" });
   if (!res.ok) throw new Error(`fetch failed ${res.status} ${res.statusText}`);
-  const html = await res.text();
+  const buf = Buffer.from(await res.arrayBuffer());
+  const html = buf.toString("latin1");
 
   const $ = cheerio.load(html);
 
@@ -120,6 +126,7 @@ export async function importPygmeSpelprogramHtml(source) {
     // - ibland interna .asp eller teatercentrum-länk (mer info)
     const u = absUrl(baseUrl, href);
     const isKulturbiljetter = u ? /kulturbiljetter\.se\/evenemang\//i.test(u) : false;
+    const isInternalAsp = u ? (/pygmeteatern\.se\/(?:se\/)?[^\s]+\.asp(\?.*)?$/i.test(u) && !/spelprogram\.asp$/i.test(u) && !/default\.asp$/i.test(u)) : false;
 
     items.push({
       title: title || "Pygméteatern",
@@ -135,9 +142,25 @@ export async function importPygmeSpelprogramHtml(source) {
         ? null
         : (u ? `Mer info: ${u}` : null),
       price_type: "unknown",
-      image_url: null,
+      image_url: (((t)=> (t.includes("spöken") || (t.includes("sp") && t.includes("ken") && t.includes("rym"))) )((title||"").toLowerCase()) ? "https://www.pygmeteatern.se/img/press/3spoken_press.jpg" : (((t)=> (t.includes("sagan som rymde") || (t.includes("sagan") && t.includes("rym"))) )((title||"").toLowerCase()) ? "https://www.pygmeteatern.se/img/press/skogstroll2_p.jpg" : null)),
+      details_url: isInternalAsp ? u : (((title||"").toLowerCase().includes("spöken")) ? "http://www.pygmeteatern.se/se/spoken.asp" : null),
     });
   });
+  // Enrich images from internal detail pages (e.g. sagan.asp -> /img/bilder/t_*.jpg)
+  for (const it of items) {
+    if (it.image_url) continue;
+    const du = it.details_url;
+    if (!du) continue;
+    try {
+      const r = await fetch(du, { redirect: "follow" });
+      if (!r.ok) continue;
+      const h = await r.text();
+      const m = h.match(/<img[^>]+src=["' ]?(\.\.\/img\/bilder\/[^"' >]+\.jpg)/i);
+      if (m && m[1]) {
+        it.image_url = absUrl("http:\/\/www.pygmeteatern.se\/se\/", m[1]);
+      }
+    } catch {}
+  }
 
   return items;
 }

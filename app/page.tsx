@@ -1,4 +1,4 @@
-import BottomFilterBar from "./_components/BottomFilterBar";
+import BottomFilterBar from "./_components/BottomFilterBarNoSSR";
 import { SWEDISH_CITIES } from "@/lib/swedishCities";
 
 import DescriptionToggle from "./_components/DescriptionToggle";
@@ -567,6 +567,25 @@ const eventsForList = (eventsDeduped as EventRow[]);
   const eventsForRailRaw = (railData ?? []) as EventRow[];
   const eventsForRail = (dedupeEventsForList(eventsForRailRaw) as EventRow[]);
 
+  // === Featured (Utvalt) — deterministisk via fasta event_id ===
+  const FEATURED_IDS = [
+    "740ec753-3c49-437d-9185-7cee21ca1493", // Evigt Edvin
+    "5459b412-2694-4996-a30c-430c68a7cbd7", // Pappa Kapsyl
+    "3b0cf550-dc03-47ac-88d2-c3ae7ecf2aec", // Trad On The Prom
+    "91203abb-759e-441d-af87-b82e110799b7", // Bygdespelet Höga Kusten
+    "dbad2d3a-e841-4e0f-a73a-16fa6cf90310", // Djungelboken – The Musical
+  ];
+
+  const { data: featuredRaw } = await supabase
+    .from("public_events_with_cta")
+    .select("*")
+    .gte("start_at", nowISO)
+    .in("id", FEATURED_IDS);
+
+  const featuredById = new Map<string, any>((featuredRaw ?? []).map((e: any) => [String(e.id), e]));
+  const featuredEvents = FEATURED_IDS.map((id) => featuredById.get(String(id))).filter(Boolean);
+
+
 const total = count ?? 0;
 const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 const hasPrev = page > 1;
@@ -818,25 +837,7 @@ return (
                 <span className="text-xs text-slate-500">Tips</span>
               </div>
               {(() => {
-                const WANT = [
-                  "Evigt Edvin",
-                  "pappa kapsyl",
-                  "Trad On The Prom",
-                  "Bygdespelet Höga Kusten",
-                  "Djungelboken the Musical",
-                ];
-                const norm = (s: any) => String(s || "").toLowerCase().replace(/\s+/g, " ").replace(/[\"\-–—:;,.!()\[\]]/g, "").trim();
-                const want = WANT.map(norm);
-                const pool = Array.isArray(eventsForRail) ? eventsForRail : [];
-                const picked: any[] = [];
-                for (const e of pool) {
-                  const t = norm(e?.title);
-                  if (!t) continue;
-                  if (!want.some(w => t.includes(w))) continue;
-                  if (picked.some(x => String(x?.id) === String(e?.id))) continue;
-                  picked.push(e);
-                  if (picked.length >= 5) break;
-                }
+                const picked: any[] = Array.isArray(featuredEvents) ? featuredEvents : [];
                 return (
                   <div className="mt-3 grid gap-3">
                     {picked.map((e, i) => (

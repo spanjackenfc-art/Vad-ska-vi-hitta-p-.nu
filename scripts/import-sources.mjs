@@ -523,7 +523,7 @@ async function upsertEventPrefer(source, payload) {
     // Lower-ranked only fills blanks
     if (!existing.ticket_url && payload.ticket_url) patch.ticket_url = payload.ticket_url;
     if (!existing.organizer_url && payload.organizer_url) patch.organizer_url = payload.organizer_url;
-    if (!existing.image_url && payload.image_url && !existing.image_storage_path) patch.image_url = payload.image_url;
+    if ((!existing.image_url || String(existing.image_url).trim() === "") && payload.image_url && !existing.image_storage_path) patch.image_url = payload.image_url;
     if (!existing.image_url_original && payload.image_url) patch.image_url_original = payload.image_url;
 
     if (cached && cached.publicUrl) {
