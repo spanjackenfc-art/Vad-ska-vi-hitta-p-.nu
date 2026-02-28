@@ -847,49 +847,9 @@ return (
               </div>
               {(() => {
                 const picked: any[] = Array.isArray(railPinnedEvents) ? [...railPinnedEvents] : [];
-                const seen = new Set(picked.map((e:any)=>String(e?.id)));
-
-                // Fill from sponsored (top list)
-                if (picked.length < 5 && Array.isArray(topSponsored)) {
-                  for (const x of topSponsored) {
-                    const ev = x?.ev;
-                    if (!ev) continue;
-                    const id = String(ev?.id);
-                    if (!id || seen.has(id)) continue;
-                    picked.push(ev);
-                    seen.add(id);
-                    if (picked.length >= 5) break;
-                  }
-                }
-
-                // Fill from rail pool (future events)
-                if (picked.length < 5) {
-                  const pool2 = Array.isArray(eventsForRail) ? eventsForRail : [];
-                  for (const ev of pool2) {
-                    const id = String(ev?.id);
-                    if (!id || seen.has(id)) continue;
-                    picked.push(ev);
-                    seen.add(id);
-                    if (picked.length >= 5) break;
-                  }
-                }
-
-
-                // Final fill from current page list (deterministic fallback)
-                if (picked.length < 5) {
-                  const pool3 = Array.isArray(eventsForList) ? eventsForList : [];
-                  for (const ev of pool3) {
-                    const id = String(ev?.id);
-                    if (!id || seen.has(id)) continue;
-                    picked.push(ev);
-                    seen.add(id);
-                    if (picked.length >= 5) break;
-                  }
-                }
-
 
                 if (DEBUG) {
-                  console.log("[DBG_FEATURED_PICKED]", picked.map((e:any)=>({id:e?.id,title:e?.title,city:e?.city,venue:e?.venue_name,img:e?.image_url}))); 
+                  console.log("[DBG_RAIL_PINNED]", picked.map((e:any)=>({id:e?.id,title:e?.title,city:e?.city,venue:e?.venue_name,img:e?.image_url,cta:primaryCtaUrl(e)})));
                 }
                 return (
                   <div className="mt-3 grid gap-3">
