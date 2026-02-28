@@ -587,12 +587,11 @@ const eventsForList = (eventsDeduped as EventRow[]);
 
   // === Rail (sidopanel) — LOCKED / curated (never changes with filters) ===
   const RAIL_IDS = [
-    // TODO: replace/curate freely, order is respected
     "740ec753-3c49-437d-9185-7cee21ca1493", // Evigt Edvin
     "e0d85a4a-50da-4f56-81c7-1ecc1174b51e", // Sweet sixteen
     "3b0cf550-dc03-47ac-88d2-c3ae7ecf2aec", // Trad On The Prom
-    "5459b412-2694-4996-a30c-430c68a7cbd7", // Pappa Kapsyl
-    "91203abb-759e-441d-af87-b82e110799b7", // Bygdespelet Hoga Kusten
+    "261d5297-2e2f-4f2f-8c46-2f88063ea82f", // Den gröna jättekvinnan
+    "91203abb-759e-441d-af87-b82e110799b7", // Bygdespelet Höga Kusten
   ];
 
   const { data: railPinnedRaw } = await supabase
