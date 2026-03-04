@@ -171,7 +171,7 @@ const p = String(source?.parser || "").toLowerCase();
 function canonicalKeyFor({ title, startISO, city }) {
   const t = normalizeTitleForKey(title);
   const c = String(city || "").toLowerCase().trim();
-  return `${t}__${startISO}__${c}`;
+  return `${t}__${startISO.slice(0,10)}__${c}`;
 }
 
 
