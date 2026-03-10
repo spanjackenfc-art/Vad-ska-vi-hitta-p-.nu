@@ -333,7 +333,7 @@ function normKey(s: string) {
 
 function eventDedupeKey(e: any) {
   const title = normKey(e.title || "");
-  return title;
+  return title + "__" + String(e.start_at).slice(0,10);
 }
 
 
