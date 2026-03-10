@@ -1547,6 +1547,7 @@ if (parser === "html" || HTML_PARSERS[parser]) {
     });
   }
   console.log(`Klart. Totalt upsertade ${total} events.`);
+  await import("./cleanup-old-events.mjs");
 }
 
 
