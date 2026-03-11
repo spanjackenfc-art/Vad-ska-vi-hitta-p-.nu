@@ -19,7 +19,7 @@ function isValidEmail(x: string) {
 export default function NewsletterPopup({
   onlyHome = true,
   delayMs = 3500,
-  storageKey = "newsletter_popup_dismissed_v3",
+  storageKey = "newsletter_popup_dismissed_v5",
 }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -108,7 +108,7 @@ export default function NewsletterPopup({
       />
 
       {/* right slide-in panel */}
-      <div className="absolute right-3 bottom-3 sm:right-6 sm:bottom-6 pointer-events-auto">
+      <div className="absolute left-3 bottom-3 sm:left-6 sm:bottom-6 pointer-events-auto">
         <div className="w-[calc(100vw-24px)] max-w-md rounded-3xl shadow-2xl overflow-hidden ring-1 ring-black/5 bg-white">
           <div className="relative p-5 sm:p-6">
             {/* colorful backdrop */}

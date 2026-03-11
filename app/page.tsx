@@ -1,5 +1,6 @@
 import BottomFilterBar from "./_components/BottomFilterBarNoSSR";
 import { SWEDISH_CITIES } from "@/lib/swedishCities";
+import NewsletterPopup from "./_components/NewsletterPopup";
 
 import DescriptionToggle from "./_components/DescriptionToggle";
 import Hero from "./_components/Hero";
@@ -776,6 +777,7 @@ const safeDate = (raw: string) => {
 
 return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
+      <NewsletterPopup />
       {/* Topbar */}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
