@@ -861,7 +861,7 @@ async function importICS(source) {
     };
 
     const rawVenueForCity = venueFromDesc || venueFromSummary || null;
-    const derivedCity2 = derivedCity || extractCityFromVenue(rawVenueForCity);
+    const derivedCity2 = source.city || derivedCity || extractCityFromVenue(rawVenueForCity);
 
     // Beskrivning: tider från LOCATION, plus ev lång DESCRIPTION
     const builtDescription = (() => {
