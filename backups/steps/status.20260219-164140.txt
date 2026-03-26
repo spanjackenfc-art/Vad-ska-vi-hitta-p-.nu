@@ -1,6 +1,0 @@
- M scripts/parsers/goteborgsoperan_html.mjs
-?? backups/steps/diff.20260219-064047.patch
-?? backups/steps/diff.20260219-164140.patch
-?? backups/steps/status.20260219-064047.txt
-?? backups/steps/status.20260219-164140.txt
-?? public/images/

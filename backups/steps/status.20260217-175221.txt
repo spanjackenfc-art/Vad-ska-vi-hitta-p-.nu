@@ -1,2 +1,0 @@
-?? backups/steps/diff.20260217-175221.patch
-?? backups/steps/status.20260217-175221.txt

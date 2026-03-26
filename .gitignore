@@ -61,3 +61,8 @@ backups/steps/
 # local snapshots (never commit)
 backups/snapshots/
 *.tgz
+
+# local repo-noise
+/backup/
+/supabase/.temp/
+scripts/parsers/*.BACKUP-*
