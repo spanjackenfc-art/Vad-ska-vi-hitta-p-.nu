@@ -1,3 +1,5 @@
+import visitstockholm_html from "./visitstockholm_html.mjs";
+import konserthuset_html from "./konserthuset_html.mjs";
 import { importTickster } from "./tickster_html.mjs";
 import { importKulturbiljetterSearch } from "./kulturbiljetter_search_html.mjs";
 import { importKulturbiljetterArrangor } from "./kulturbiljetter_arrangor_html.mjs";
@@ -6,7 +8,7 @@ import goteborgsoperan_html from "./goteborgsoperan_html.mjs";
 import malmostadsteater_html from "./malmostadsteater_html.mjs";
 import malmoopera_html from "./malmoopera_html.mjs";
 import html from "./html.mjs";
-// Nästa tre bygger vi strax:
+import nortic_organizer_eventcards_html from "./nortic_organizer_eventcards_html.mjs";// Nästa tre bygger vi strax:
 import { importWelma } from "./welma_html.mjs";
 import { importBarnistan } from "./barnistan_html.mjs";
 import { importDNKalendariet } from "./dn_kalendariet.mjs";
@@ -21,6 +23,8 @@ import { importIntimanForestallningar } from "./intiman_forestallningar_html.mjs
 import { importOrionPaScen } from "./orion_pa_scen_html.mjs";
 import { importPygmeSpelprogramHtml } from "./pygme_spelprogram_html.mjs";
 import { importTicketmasterApi } from "./ticketmaster_api.mjs";
+import gotalejon_html from "./gotalejon_html.mjs";
+import o2scenkonst_html from "./o2scenkonst_html.mjs";
 
 export const HTML_PARSERS = {
   ticketmaster_api: importTicketmasterApi,
@@ -31,8 +35,11 @@ export const HTML_PARSERS = {
   goteborgsoperan_html: goteborgsoperan_html,
   html: html,
   nortic_event_html: html,
-  musikal_html: html,
-  o2scenkonst_html: html,
+  nortic_organizer_eventcards_html: nortic_organizer_eventcards_html,
+  musikal_html: gotalejon_html,
+  o2scenkonst_html: o2scenkonst_html,
+  konserthuset_html: konserthuset_html,
+  visitstockholm_html: visitstockholm_html,
   tickster_html: importTickster,
   kulturbiljetter_arrangor_html: importKulturbiljetterArrangor,
   kulturbiljetter_search_html: importKulturbiljetterSearch,

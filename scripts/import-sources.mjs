@@ -1261,6 +1261,7 @@ async function run() {
   let total = 0;
 
   for (const s of sources) {
+  
   const t0 = Date.now();
     let parser = ((s.kind || "").toLowerCase() === "ics" ? "ics" : ((s.parser || "html").toLowerCase()));
     // Routing: alla *_html behandlas som "html" (utom tickster_html)
@@ -1315,37 +1316,52 @@ async function run() {
       }
       continue;
     }
+
+    let items;
     if (parser === "tickster_html") {
       try {
-        const items = await importTickster(s);
+        if (!items) items = await importTickster(s);
         let n = 0;
 
         for (const e of (items || [])) {
           if (!e?.title || !e?.start_at || !e?.source_url) continue;
 
-                const ticketKey = clean(e.ticket_url || e.organizer_url || e.source_url) || "";
-          const fingerprint = `${s.id}__${e.source_url}__${e.start_at}__${ticketKey}`;
+        const title = e.title || "Untitled event";
+        const startISO = new Date(Date.parse(e.start_at)).toISOString();
+        const city = e.city || s.city || "Stockholm";
+        const src = e.source_url || s.url;
+        const ticket = e.ticket_url || null;
+        const organizer = e.organizer_url || null;
+        const ticketKey = clean(ticket || organizer || src) || "";
+        const fingerprint = `${s.id}__${src}__${startISO}__${ticketKey}`;
+        const category = inferGenreCategory({ source: s, it: e }) ?? null;
+        const audience = inferAudience({ source: s, it: e });
+        const subcategory = e.subcategory ?? inferSubcategory({ source: s, it: e }) ?? null;
 
-          const payload = {
-            fingerprint,
-            title: e.title || "Untitled event",
-            description: null,
-            category: inferGenreCategory({ source: s, it: e }) ?? null,
-            audience: inferAudience({ source: s, it: e }),
-            subcategory: e.subcategory ?? inferSubcategory({ source: s, it: e }) ?? null,
-            start_at: e.start_at,
-            end_at: e.end_at ?? null,
-            city: s.city ?? "Stockholm",
-            venue_name: normalizeVenue(e.venue_name),
-            price_type: "unknown",
-            price_min: null,
-            price_max: null,
-            ticket_url: e.ticket_url ?? e.source_url,
-            source_url: e.source_url,
-            status: "active",
-          };
-
-          await upsertEvent(payload);
+        await upsertEventPrefer(s, {
+          source_id: s.id,
+          source_rank: sourceRank(s),
+          canonical_key: canonicalKeyFor({ title, startISO, city }),
+          fingerprint,
+          title,
+          description: e.description || null,
+          category,
+          audience,
+          subcategory,
+          start_at: startISO,
+          end_at: e.end_at ?? null,
+          city,
+          venue_name: normalizeVenue(e.venue_name),
+          price_type: e.price_type || "unknown",
+          price_min: e.price_min ?? null,
+          price_max: e.price_max ?? null,
+          ticket_url: ticket,
+          organizer_url: organizer,
+          image_url: e.image_url || await fetchOgImageFor(s, ticket || organizer || src) || null,
+          listing_url: e.listing_url || s.url || null,
+          source_url: src,
+          status: "active",
+        });
           n += 1;
         }
 
@@ -1409,7 +1425,24 @@ if (parser === "html" || HTML_PARSERS[parser]) {
   }
 
   try {
-    const out = await fn(s);
+    let out;
+    if ([
+      "folkoperan_html",
+      "kulturbiljetter_search_html",
+      "chinateatern_html",
+      "dramaten_html",
+      "malmolive_html",
+      "malmostadsteater_html",
+      "malmoopera_html",
+      "stadsteatern_html"
+    ].includes(key)) {
+      out = await fn(s);
+    } else {
+      const res = await fetch(s.url);
+      if (!res.ok) throw new Error(`HTML fetch failed (${s.name}): ${res.status} ${res.statusText}`);
+      const html = await res.text();
+      out = await fn({ html, source: s });
+    }
 
     // Parsers kan returnera:
     //  - number (redan upsertat internt)
