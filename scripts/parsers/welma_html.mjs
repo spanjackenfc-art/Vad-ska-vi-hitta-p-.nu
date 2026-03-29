@@ -96,16 +96,7 @@ function pickText($root, sel) {
   return v || null;
 }
 
-export async function importWelma(source) {
-  const res = await fetch(source.url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; events-ingestor/1.0)",
-      "Accept": "text/html,application/xhtml+xml",
-    },
-  });
-  if (!res.ok) throw new Error(`HTML fetch failed (${source.name}): ${res.status} ${res.statusText}`);
-
-  const html = await res.text();
+export async function importWelma({ html, source }) {
   const $ = cheerio.load(html);
   const now = new Date();
 
