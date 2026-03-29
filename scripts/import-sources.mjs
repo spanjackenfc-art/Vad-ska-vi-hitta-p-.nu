@@ -508,8 +508,8 @@ async function upsertEventPrefer(source, payload) {
 
   const patch = {};
 
-  if (inRank >= exRank) {
-    // Higher-ranked overwrites primary fields
+  if (inRank > exRank) {
+    // Strictly higher-ranked overwrites primary fields
     patch.source_rank = inRank;
     patch.source_id = payload.source_id;
     patch.source_url = payload.source_url;
