@@ -37,11 +37,8 @@ async function findTicksterUrlOnDetail(absUrl) {
   }
 }
 
-export async function importOrionPaScen(source) {
-  const res = await fetch(source.url);
-  if (!res.ok) throw new Error(`HTML fetch failed (${source.name}): ${res.status} ${res.statusText}`);
-  const html = await res.text();
-  const $ = cheerio.load(html);
+export async function importOrionPaScen({ html, source }) {
+  const $ = cheerio.load(String(html || ""));
 
   // På scen-tabben: w-dyn-items med länkar /scen/...
   const pane = $("div.w-tab-pane[data-w-tab='På scen']").first();
