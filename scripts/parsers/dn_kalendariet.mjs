@@ -170,19 +170,7 @@ async function fetchDnDetailCta(detailUrl) {
   return cands[0]?.url || null;
 }
 
-export async function importDNKalendariet(source) {
-  const res = await fetch(source.url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; events-ingestor/1.0)",
-      "Accept": "text/html,application/xhtml+xml",
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`HTML fetch failed (${source.name}): ${res.status} ${res.statusText}`);
-  }
-
-  const html = await res.text();
+export async function importDNKalendariet({ html, source }) {
   const $ = cheerio.load(html);
 
   const items = [];
