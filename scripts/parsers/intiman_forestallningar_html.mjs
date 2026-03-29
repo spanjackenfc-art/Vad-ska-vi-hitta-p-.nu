@@ -44,8 +44,8 @@ function parseSvDateToken(tok) {
   const mon = MONTHS[monName];
   if (mon === undefined) return null;
 
-  // tid okänd -> 00:00 lokal tid (Stockholm)
-  return new Date(year, mon, day, 0, 0, 0).toISOString();
+  // tid okänd -> lagra som 12:00 UTC för att bevara rätt kalenderdatum utan tidszonsglidning
+  return new Date(Date.UTC(year, mon, day, 12, 0, 0)).toISOString();
 }
 
 function parseRange(text) {
@@ -55,21 +55,17 @@ function parseRange(text) {
     .replace(/\s*–\s*/g, " – ");
 
   if (t.includes(" – ")) {
-    const [a, b] = t.split(" – ").map(x => x.trim());
+    const [a] = t.split(" – ").map(x => x.trim());
     const startISO = parseSvDateToken(a);
-    const endISO = parseSvDateToken(b);
-    return { startISO, endISO, raw: t };
+    return { startISO, endISO: null, raw: t };
   }
 
   const startISO = parseSvDateToken(t);
   return { startISO, endISO: null, raw: t };
 }
 
-export async function importIntimanForestallningar(source) {
-  const res = await fetch(source.url);
-  if (!res.ok) throw new Error(`HTML fetch failed (${source.name}): ${res.status} ${res.statusText}`);
-  const html = await res.text();
-  const $ = cheerio.load(html);
+export async function importIntimanForestallningar({ html, source }) {
+  const $ = cheerio.load(String(html || ""));
 
   const items = [];
 
