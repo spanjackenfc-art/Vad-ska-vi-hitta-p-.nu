@@ -1,10 +1,11 @@
 const BASE = "https://malmolive.se";
 
 function absUrl(href) {
-  if (!href) return null;
-  if (href.startsWith("http://") || href.startsWith("https://")) return href;
-  if (href.startsWith("/")) return BASE + href;
-  return BASE + "/" + href;
+  const h = String(href || "").trim();
+  if (!h) return null;
+  if (h.startsWith("http://") || h.startsWith("https://")) return h;
+  if (h.startsWith("/")) return BASE + h;
+  return BASE + "/" + h;
 }
 
 function norm(s) {
@@ -68,11 +69,21 @@ function extractTitle(html) {
 
 function extractYearMapFromListing(listingHtml) {
   const map = new Map();
-  const re = /href="(\/program\/[^"]+)"[\s\S]{0,500}?(\b20\d{2}\b)/gi;
+
+  // primary: href before year
+  const re1 = /href="(\/program\/[^"]+)"[\s\S]{0,500}?(\b20\d{2}\b)/gi;
   let m;
-  while ((m = re.exec(listingHtml)) !== null) {
+  while ((m = re1.exec(listingHtml)) !== null) {
     map.set(absUrl(m[1]), Number(m[2]));
   }
+
+  // fallback: year before href (needed on some Malmö Live listing variants)
+  const re2 = /(\b20\d{2}\b)[\s\S]{0,1500}?href="(\/program\/[^"]+)"/gi;
+  while ((m = re2.exec(listingHtml)) !== null) {
+    const href = absUrl(m[2]);
+    if (!map.has(href)) map.set(href, Number(m[1]));
+  }
+
   return map;
 }
 
@@ -118,15 +129,41 @@ function extractOgImage(html) {
   return absUrl(cleaned) || cleaned;
 }
 
+function extractDescription(html) {
+  const m =
+    html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["']/i) ||
+    html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:description["']/i) ||
+    html.match(/<meta[^>]+name=["']twitter:description["'][^>]+content=["']([^"']+)["']/i) ||
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:description["']/i);
+
+  const raw = m ? norm(m[1]) : null;
+  return raw ? raw.replaceAll("&amp;", "&") : null;
+}
+
 export default async function malmolive_html(source) {
   const listing_url = source?.listing_url || `${BASE}/program`;
+  const family_listing_url = source?.family_listing_url || `${BASE}/kommande-evenemang-for-barn-familj`;
   const city = source?.city || "Malmö";
   const metro_city = source?.metro_city || "Malmö";
   const category = source?.category || "musik";
 
   const listingHtml = await fetchText(listing_url);
-  const links = extractProgramLinks(listingHtml);
-  const yearMap = extractYearMapFromListing(listingHtml);
+  let familyListingHtml = "";
+  try {
+    familyListingHtml = await fetchText(family_listing_url);
+  } catch {}
+
+  const links = [...new Set([
+    ...extractProgramLinks(listingHtml),
+    ...extractProgramLinks(familyListingHtml),
+  ])];
+
+  const yearMap = new Map([
+    ...extractYearMapFromListing(listingHtml).entries(),
+    ...extractYearMapFromListing(familyListingHtml).entries(),
+  ]);
 
   const events = [];
 
@@ -149,11 +186,12 @@ export default async function malmolive_html(source) {
     if (!startAts.length) continue;
 
     const image_url = extractOgImage(html);
+    const description = extractDescription(html);
 
     for (let i = 0; i < Math.min(ticketUrls.length, startAts.length); i++) {
       events.push({
         title,
-        description: null,
+        description: description || null,
         start_at: startAts[i],
         end_at: null,
         city,
