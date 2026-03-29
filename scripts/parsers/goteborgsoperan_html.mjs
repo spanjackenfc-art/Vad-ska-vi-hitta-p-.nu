@@ -48,11 +48,49 @@ export default async function parse({ html, source }){
 
     // 1) Primär: SSR/Apollo JSON -> programListingBlock.pages (pageSummary)
     const pages = extractProgrammePagesFromHtml(h);
+
+    if(!pages){
+      const re = /title="([^"]+)"[^>]+href="(\/forestallningar\/sasong-2025-2026\/[^"]+)/g;
+      let m;
+      while((m = re.exec(h))){
+        const name = m[1];
+        const url = absUrl(m[2]);
+        let start_at = null;
+        try{
+          const page = await (await fetch(url)).text();
+          const dm = page.match(/Spelas\\",\\"text\\":\\"([^"]+)/);
+          if(dm){
+            const first = dm[1].match(/[0-9]{1,2} [a-zåäö]{3}\. [0-9]{4}/);
+            if(first) start_at = parseFirstDate(first[0]);
+          }
+        }catch{}
+        if(!name || !url || !start_at) continue;
+        rows.push({
+          title:name,
+          start_at:start_at,
+          city:(source?.city)||"Göteborg",
+          venue_name:"GöteborgsOperan",
+          description:null,
+          image_url:"/images/goteborgsoperan.webp",
+          ticket_url:null,
+          organizer_url:url,
+          source_url:url,
+          listing_url:source?.url||null,
+          category:"teater",
+          subcategory:null
+        });
+      }
+    }
+
     if(pages && pages.length){
       for(const p of pages){
         const name = String(p?.name || "").trim();
         const url = absUrl(p?.url);
-        const meta = String(p?.meta || "");
+        let meta = String(p?.meta || "");
+        if(!meta){
+          const m = h.match(/Spelas\\",\\"text\\":\\"([^"]+)/);
+          if(m) meta = m[1];
+        }
         const start_at = parseFirstDate(meta); // tar första datumet i meta (t.ex. "27 sep. 2025 — ...")
         const tag = String(p?.tag || "").trim();
 
