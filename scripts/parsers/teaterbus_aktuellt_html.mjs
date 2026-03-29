@@ -143,9 +143,6 @@ export function parseTeaterbusAktuellt(html, source) {
   });
 }
 
-export async function importTeaterbusAktuellt(source) {
-  const res = await fetch(source.url);
-  if (!res.ok) throw new Error(`HTML fetch failed (${source.name}): ${res.status} ${res.statusText}`);
-  const html = await res.text();
-  return parseTeaterbusAktuellt(html, source);
+export async function importTeaterbusAktuellt({ html, source }) {
+  return parseTeaterbusAktuellt(String(html || ""), source);
 }
