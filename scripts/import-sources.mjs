@@ -1440,7 +1440,13 @@ if (parser === "html" || HTML_PARSERS[parser]) {
     } else {
       const res = await fetch(s.url);
       if (!res.ok) throw new Error(`HTML fetch failed (${s.name}): ${res.status} ${res.statusText}`);
-      const html = await res.text();
+      let html;
+      if (key === "pygme_spelprogram_html") {
+        const ab = await res.arrayBuffer();
+        html = Buffer.from(ab).toString("latin1");
+      } else {
+        html = await res.text();
+      }
       out = await fn({ html, source: s });
     }
 

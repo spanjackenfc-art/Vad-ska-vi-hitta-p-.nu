@@ -65,15 +65,10 @@ function ymd(year, month, day) {
   return `${year}-${mm}-${dd}`;
 }
 
-export async function importPygmeSpelprogramHtml(source) {
+export async function importPygmeSpelprogramHtml({ html, source }) {
   if (!source || !source.url) throw new Error("Missing source.url");
 
-  const res = await fetch(source.url, { redirect: "follow" });
-  if (!res.ok) throw new Error(`fetch failed ${res.status} ${res.statusText}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  const html = buf.toString("latin1");
-
-  const $ = cheerio.load(html);
+  const $ = cheerio.load(String(html || ""));
 
   const items = [];
   const baseUrl = source.url;
