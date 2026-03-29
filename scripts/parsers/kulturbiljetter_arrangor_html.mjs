@@ -100,16 +100,8 @@ async function fetchFirstFutureShow(sourceUrl) {
   };
 }
 
-export async function importKulturbiljetterArrangor(source) {
-  const res = await fetch(source.url, {
-    headers: {
-      "user-agent": "sverige-event-bot/1.0 (+https://vadskavihittapå.nu)",
-      "accept": "text/html,application/xhtml+xml",
-    },
-  });
-  if (!res.ok) throw new Error(`Kulturbiljetter fetch failed (${source.name}): ${res.status} ${res.statusText}`);
-  const html = await res.text();
-  const $ = cheerio.load(html);
+export async function importKulturbiljetterArrangor({ html, source }) {
+  const $ = cheerio.load(String(html || ""));
 
   const cards = [];
   $(".serp .serp-cell").each((_, el) => {
