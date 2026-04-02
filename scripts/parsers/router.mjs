@@ -9,6 +9,7 @@ import malmostadsteater_html from "./malmostadsteater_html.mjs";
 import malmoopera_html from "./malmoopera_html.mjs";
 import html from "./html.mjs";
 import nortic_organizer_eventcards_html from "./nortic_organizer_eventcards_html.mjs";// Nästa tre bygger vi strax:
+import nortic_search_api from "./nortic_search_api.mjs";
 import { importWelma } from "./welma_html.mjs";
 import { importBarnistan } from "./barnistan_html.mjs";
 import { importDNKalendariet } from "./dn_kalendariet.mjs";
@@ -36,6 +37,7 @@ export const HTML_PARSERS = {
   html: html,
   nortic_event_html: html,
   nortic_organizer_eventcards_html: nortic_organizer_eventcards_html,
+  nortic_search_api: nortic_search_api,
   musikal_html: gotalejon_html,
   o2scenkonst_html: o2scenkonst_html,
   konserthuset_html: konserthuset_html,

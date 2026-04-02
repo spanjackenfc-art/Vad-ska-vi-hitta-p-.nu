@@ -1434,7 +1434,9 @@ if (parser === "html" || HTML_PARSERS[parser]) {
       "malmolive_html",
       "malmostadsteater_html",
       "malmoopera_html",
-      "stadsteatern_html"
+      "stadsteatern_html",
+      "ticketmaster_api",
+      "nortic_search_api"
     ].includes(key)) {
       out = await fn(s);
     } else {

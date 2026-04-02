@@ -1,50 +1,102 @@
 /**
  * Ticketmaster Discovery API → return normalized items
  *
- * Returns: Array<{ title, start_at, end_at?, city?, venue_name?, ticket_url?, source_url?, image_url?, price_min?, price_max? }>
+ * Returns:
+ * Array<{ title, start_at, end_at?, city?, venue_name?, ticket_url?, source_url?, image_url?, price_min?, price_max? }>
  */
+
 function shouldIncludeTicketmasterEvent(ev) {
   const title = String(ev?.name || "").trim();
   const t = title.toLowerCase();
+
+  if (!title) return false;
 
   // Drop obvious junk/test/internal
   const junk = ["do not purchase", "do not purchases", "test", "qa", "dummy", "internal"];
   if (junk.some(x => t.includes(x))) return false;
 
-  // Drop clearly non-family stuff that leaks into "family"
-  const nonFamily = ["beer", "öl", "ol", "ölmässa", "olmassa", "expo", "mässa", "massa", "vin", "whisky"];
-  if (nonFamily.some(x => t.includes(x))) return false;
-
-  // Require a usable date
+  // Require a usable future date
   const startISO = ev?.dates?.start?.dateTime || null;
   if (!startISO) return false;
 
+  const startMs = Date.parse(startISO);
+  if (!Number.isFinite(startMs)) return false;
+  if (startMs < Date.now()) return false;
+
   return true;
+}
+
+async function fetchTicketmasterPage({ apiKey, page, size, startDateTime }) {
+  const url = new URL("https://app.ticketmaster.com/discovery/v2/events.json");
+  url.searchParams.set("apikey", apiKey);
+  url.searchParams.set("countryCode", "SE");
+  url.searchParams.set("size", String(size));
+  url.searchParams.set("page", String(page));
+  url.searchParams.set("sort", "date,asc");
+  url.searchParams.set("startDateTime", startDateTime);
+
+  const res = await fetch(url.toString(), {
+    headers: { accept: "application/json" },
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      "Ticketmaster API failed: " +
+        res.status +
+        " " +
+        res.statusText +
+        (body ? " :: " + body.slice(0, 300) : "")
+    );
+  }
+
+  return await res.json();
 }
 
 export async function importTicketmasterApi(source) {
   const apiKey = process.env.TICKETMASTER_API_KEY;
   if (!apiKey) throw new Error("Missing TICKETMASTER_API_KEY");
 
-  const url = new URL("https://app.ticketmaster.com/discovery/v2/events.json");
-  url.searchParams.set("apikey", apiKey);
-  url.searchParams.set("countryCode", "SE");
-  url.searchParams.set("classificationName", "family");
-  url.searchParams.set("size", "20");
-  url.searchParams.set("page", "0");
+  const size = 200;
+  const startDateTime = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 
-  const res = await fetch(url.toString(), {
-    headers: { "accept": "application/json" },
+  const first = await fetchTicketmasterPage({
+    apiKey,
+    page: 0,
+    size,
+    startDateTime,
   });
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error("Ticketmaster API failed: " + res.status + " " + res.statusText + (body ? " :: " + body.slice(0, 200) : ""));
+  const totalPagesRaw = Number(first?.page?.totalPages || 0);
+  const totalPages = Math.max(1, Math.min(totalPagesRaw, 50));
+
+  const raw = [];
+  raw.push(...(first?._embedded?.events || []));
+
+  for (let page = 1; page < totalPages; page++) {
+    const json = await fetchTicketmasterPage({
+      apiKey,
+      page,
+      size,
+      startDateTime,
+    });
+    raw.push(...(json?._embedded?.events || []));
   }
 
-  const json = await res.json();
-  const eventsRaw = json?._embedded?.events || [];
-  const events = eventsRaw.filter(shouldIncludeTicketmasterEvent);
+  const seen = new Set();
+  const events = raw.filter(ev => {
+    if (!shouldIncludeTicketmasterEvent(ev)) return false;
+
+    const key =
+      ev?.id ||
+      ev?.url ||
+      `${String(ev?.name || "").trim()}__${String(ev?.dates?.start?.dateTime || "").trim()}`;
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+
+    return true;
+  });
 
   const items = events.map(ev => {
     const startISO = ev?.dates?.start?.dateTime || null;
@@ -57,8 +109,7 @@ export async function importTicketmasterApi(source) {
     const ticketUrl = ev?.url || null;
 
     const image = Array.isArray(ev?.images)
-      ? ev.images
-          .sort((a,b) => (b.width || 0) - (a.width || 0))[0]?.url || null
+      ? ev.images.sort((a, b) => (b.width || 0) - (a.width || 0))[0]?.url || null
       : null;
 
     const priceMin = ev?.priceRanges?.[0]?.min ?? null;
@@ -81,7 +132,9 @@ export async function importTicketmasterApi(source) {
 
   console.log("[TICKETMASTER_API]", {
     source: source?.name,
-    returned: items.length,
+    totalPages,
+    rawReturned: raw.length,
+    filteredReturned: items.length,
   });
 
   return items;
