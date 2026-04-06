@@ -230,6 +230,9 @@ function sourceLabelForEvent(e: EventRow, sources: SourceRow[]) {
       if (byOrigin) return byOrigin.name;
     } catch {}
   }
+  const joinedCandidates = candidates.join(" ").toLowerCase();
+  if (joinedCandidates.includes("nortic.se")) return "Nortic";
+  if (joinedCandidates.includes("ticketmaster.se")) return "Ticketmaster";
   return "Okänd källa";
 }
 

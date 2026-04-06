@@ -91,9 +91,43 @@ function inferAudience({ source, it }) {
 function categoryFromSubcategory(subRaw) {
   const sub = String(subRaw || "").toLowerCase().trim();
   if (!sub) return null;
+
   if (sub === "konsert") return "musik";
-  if (sub === "visning" || sub === "workshop") return "ovrigt";
-  if (sub === "opera" || sub === "musikal" || sub === "dans") return "teater";
+
+  if (
+    sub === "opera" ||
+    sub === "musikal" ||
+    sub === "dans" ||
+    sub === "show" ||
+    sub === "humor" ||
+    sub === "teater" ||
+    sub === "barnteater" ||
+    sub === "cirkus" ||
+    sub === "föreställning" ||
+    sub === "forestallning"
+  ) return "teater";
+
+  if (
+    sub === "visning" ||
+    sub === "workshop" ||
+    sub === "guidad visning" ||
+    sub === "föredrag" ||
+    sub === "foredrag" ||
+    sub === "sport" ||
+    sub === "nattklubb" ||
+    sub === "entré" ||
+    sub === "entre" ||
+    sub === "resebiljetter" ||
+    sub === "bio" ||
+    sub === "film" ||
+    sub === "motor" ||
+    sub === "mässa" ||
+    sub === "massa" ||
+    sub === "övrigt" ||
+    sub === "ovrigt" ||
+    sub === "festival"
+  ) return "ovrigt";
+
   return null;
 }
 
@@ -325,6 +359,14 @@ const OG_CACHE = new Map();
 const OG_FETCH_COUNT = new Map(); // source_id -> count
 const OG_FETCH_MAX_PER_SOURCE = 40;
 
+function ogFetchBudgetForSource(source) {
+  const parser = String(source?.parser || "").toLowerCase();
+  const name = String(source?.name || "").toLowerCase();
+
+  if (parser === "nortic_search_api" || name.includes("nortic")) return 1000;
+  return OG_FETCH_MAX_PER_SOURCE;
+}
+
 async function fetchOgImageFor(source, candidateUrl) {
   const u0 = (candidateUrl || "").trim();
   if (!u0) return null;
@@ -332,8 +374,9 @@ async function fetchOgImageFor(source, candidateUrl) {
   if (OG_CACHE.has(u0)) return OG_CACHE.get(u0);
 
   const sid = String(source?.id || "");
+  const budget = ogFetchBudgetForSource(source);
   const n = OG_FETCH_COUNT.get(sid) || 0;
-  if (n >= OG_FETCH_MAX_PER_SOURCE) {
+  if (n >= budget) {
     OG_CACHE.set(u0, null);
     return null;
   }
@@ -537,6 +580,11 @@ async function upsertEventPrefer(source, payload) {
     if (!existing.source_id && payload.source_id) patch.source_id = payload.source_id;
   }
 
+
+  // Reactivate rows we see again in a successful import
+  if (payload.status === "active" && existing.status !== "active") {
+    patch.status = "active";
+  }
 
   // Audience: only fill if missing (never overwrite existing)
   if (!existing.audience && payload.audience) {
