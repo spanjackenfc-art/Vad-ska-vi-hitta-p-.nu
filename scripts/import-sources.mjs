@@ -151,12 +151,12 @@ function inferSubcategory({ source, it }) {
 
     if (/\bvernissage\b/i.test(blob)) return "övrigt";
 
-    if (/\b(djungelboken|next to normal|legally blonde)\b/i.test(blob)) return "musikal";
+    if (/\b(djungelboken|next to normal|legally blonde|musical)\b/i.test(blob)) return "musikal";
 
     if (
       /\b(gästspel|opera|cirkus)\b/i.test(blob) ||
       /\b(nattorienterarna|fullmåne|forever young)\b/i.test(blob) ||
-      /\b(unga klara|orionteatern|kulturhuset stadsteatern|teater brunnsgatan fyra|teatern i)\b/i.test(blob)
+      /\b(unga klara|orionteatern|kulturhuset stadsteatern|teater brunnsgatan fyra)\b/i.test(blob)
     ) return "teater";
 
     if (
@@ -171,7 +171,7 @@ function inferSubcategory({ source, it }) {
   if (/\b(visning|guidad\s*visning)\b/i.test(blob)) return "visning";
   if (/\b(workshop|kurs|helgkurs|föredrag|foredrag|prova\s*på|lär\s*dig|lar\s*dig|binderi|keramik|broderi|måleri|maleri|teckning|collage|markram[eé])\b/i.test(blob)) return "workshop";
   if (/\b(workshop|prova\s*på|föreläsning)\b/i.test(blob)) return "workshop";
-  if (/\b(konsert|kammarkonsert|recital|live)\b/i.test(blob)) return "konsert";
+  if (/(konsert\b|kammarkonsert\b|recital\b|live\b)/i.test(blob)) return "konsert";
   if (/\b(dans|ballet|balett)\b/i.test(blob)) return "dans";
   if (/\bmusikal\b/i.test(blob)) return "musikal";
 
