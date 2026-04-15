@@ -673,6 +673,24 @@ async function updateSourceHealth({ source, finishedAtISO, durationMs, upsertedC
   if (error) throw error;
 }
 
+function importWindowBounds() {
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+
+  const max = new Date(start);
+  max.setUTCMonth(max.getUTCMonth() + 12);
+  max.setUTCHours(23, 59, 59, 999);
+
+  return { nowMs: start.getTime(), maxMs: max.getTime() };
+}
+
+function isWithinImportWindow(startAtRaw) {
+  const t = Date.parse(String(startAtRaw || ""));
+  if (!Number.isFinite(t)) return false;
+  const { nowMs, maxMs } = importWindowBounds();
+  return t >= nowMs && t <= maxMs;
+}
+
 async function importICS(source) {
   const res = await fetch(source.url);
   if (!res.ok) throw new Error(`ICS fetch failed (${source.name}): ${res.status} ${res.statusText}`);
@@ -687,6 +705,7 @@ async function importICS(source) {
     if (!ev.start) continue;
 
     const startISO = new Date(ev.start).toISOString();
+    if (!isWithinImportWindow(startISO)) continue;
     const uid = ev.uid || k;
 
     const ticketKey = clean((ev.url ? String(ev.url) : "") || source.url) || "";
@@ -1137,6 +1156,7 @@ async function importVisitStockholm(source) {
   for (const it of unique) {
     const startISO = new Date(it.startDate).toISOString();
     const endISO = it.endDate ? new Date(it.endDate).toISOString() : null;
+    if (!isWithinImportWindow(startISO)) continue;
 
     // href kan vara intern eller extern
     const hrefAbs = it.href.startsWith("http")
@@ -1374,8 +1394,11 @@ async function run() {
         for (const e of (items || [])) {
           if (!e?.title || !e?.start_at || !e?.source_url) continue;
 
+        const t = Date.parse(e.start_at);
+        if (!Number.isFinite(t) || !isWithinImportWindow(e.start_at)) continue;
+
         const title = e.title || "Untitled event";
-        const startISO = new Date(Date.parse(e.start_at)).toISOString();
+        const startISO = new Date(t).toISOString();
         const city = e.city || s.city || "Stockholm";
         const src = e.source_url || s.url;
         const ticket = e.ticket_url || null;
@@ -1503,8 +1526,6 @@ if (parser === "html" || HTML_PARSERS[parser]) {
     // Parsers kan returnera:
     //  - number (redan upsertat internt)
     //  - array av items { title, start_at, end_at?, venue_name?, city?, ticket_url?, source_url? }
-    const now = Date.now();
-    const maxFutureMs = 1000 * 60 * 60 * 24 * 365; // 365 dagar
 
     let n = 0;
 
@@ -1513,15 +1534,10 @@ if (parser === "html" || HTML_PARSERS[parser]) {
     } else if (Array.isArray(out)) {
       for (const it of out) {
         if (!it || !it.start_at) continue;
+        if (!isWithinImportWindow(it.start_at)) continue;
 
         const t = Date.parse(it.start_at);
         if (!Number.isFinite(t)) continue;
-
-        // Filtrera bort uppenbart fel:
-        // - äldre än 2 dagar bakåt
-        // - mer än 365 dagar framåt
-        if (t < now - 1000 * 60 * 60 * 24 * 2) continue;
-        if (t > now + maxFutureMs) continue;
 
         const startISO = new Date(t).toISOString();
         const title = it.title || "Untitled event";
