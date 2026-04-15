@@ -17,6 +17,14 @@ async function fetchHtml(url) {
   return await res.text();
 }
 
+function absolutize(base, href) {
+  try {
+    return new URL(String(href || ""), base).toString();
+  } catch {
+    return null;
+  }
+}
+
 const MONTHS = {
   jan: 0, januari: 0,
   feb: 1, februari: 1,
@@ -68,41 +76,49 @@ function inferCity(venueText, fallbackCity) {
 }
 
 export async function importTickster(source) {
-  const listingUrl = source.url;
-  const html = await fetchHtml(listingUrl);
-  const $ = cheerio.load(html);
-
+  const seenPages = new Set();
+  const queue = [source.url];
   const out = [];
 
-  // Varje event har en "Köp"-länk med data-name + data-eventrequestcode.
-  // I närheten finns <span class="c-tile__label">DATUM, VENUE</span>
-  $("a[href*='secure.tickster.com/sv/'][data-name]").each((_, a) => {
-    const $a = $(a);
-    const ticket_url = $a.attr("href");
-    const title = clean($a.attr("data-name")) || null;
+  while (queue.length) {
+    const pageUrl = queue.shift();
+    if (!pageUrl || seenPages.has(pageUrl)) continue;
+    seenPages.add(pageUrl);
 
-    const $label = $a.closest("div").find("span.c-tile__label").first();
-    const labelText = clean($label.text()) || null;
+    const html = await fetchHtml(pageUrl);
+    const $ = cheerio.load(html);
 
-    const start_at = labelText ? parseTicksterLabelDate(labelText) : null;
-    const venue_name = labelText ? parseVenueFromLabel(labelText) : null;
-    const city = inferCity(venue_name, source.city);
+    // Alla köpknappar med data-name är kandidater, oavsett partnerdomän.
+    $("a[data-name][data-eventrequestcode]").each((_, a) => {
+      const $a = $(a);
+      const ticket_url = absolutize(pageUrl, $a.attr("href"));
+      const title = clean($a.attr("data-name")) || null;
 
-    // Vi kräver datum + titel för att undvika skräp
-    if (!title || !start_at || !ticket_url) return;
+      const $label = $a.closest("div").find("span.c-tile__label").first();
+      const labelText = clean($label.text()) || null;
 
-    out.push({
-      title,
-      start_at,
-      end_at: null,
-      venue_name,
-      city,
-      ticket_url,
-      source_url: listingUrl,
+      const start_at = labelText ? parseTicksterLabelDate(labelText) : null;
+      const venue_name = labelText ? parseVenueFromLabel(labelText) : null;
+      const city = inferCity(venue_name, source.city);
+
+      if (!title || !start_at || !ticket_url) return;
+
+      out.push({
+        title,
+        start_at,
+        end_at: null,
+        venue_name,
+        city,
+        ticket_url,
+        source_url: pageUrl,
+      });
     });
-  });
 
-  // Dedup på ticket_url (unik per event)
+    const nextHref = $("a.c-pager__page[title*='Nästa sida'], a.c-pager__page[title*='N\u00e4sta sida']").first().attr("href");
+    const nextUrl = absolutize(pageUrl, nextHref);
+    if (nextUrl && !seenPages.has(nextUrl)) queue.push(nextUrl);
+  }
+
   const dedup = new Map();
   for (const e of out) {
     const k = e.ticket_url;

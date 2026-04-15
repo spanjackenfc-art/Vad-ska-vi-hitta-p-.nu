@@ -136,6 +136,37 @@ function inferSubcategory({ source, it }) {
   const title = String(it?.title || "").toLowerCase();
   const venue = String(it?.venue_name || "").toLowerCase();
   const blob = [sn, title, venue].join(" ");
+  const parser = String(source?.parser || "").toLowerCase();
+  const ticketHost = (() => {
+    try {
+      return new URL(String(it?.ticket_url || "")).hostname.replace(/^www\./i, "").toLowerCase();
+    } catch {
+      return "";
+    }
+  })();
+  const isTickster = parser === "tickster_html" || sn.includes("tickster");
+
+  if (isTickster) {
+    if (/\b(standup|komedi|comedy)\b/i.test(blob)) return "standup";
+
+    if (/\bvernissage\b/i.test(blob)) return "övrigt";
+
+    if (/\b(djungelboken|next to normal|legally blonde)\b/i.test(blob)) return "musikal";
+
+    if (
+      /\b(gästspel|opera|cirkus)\b/i.test(blob) ||
+      /\b(nattorienterarna|fullmåne|forever young)\b/i.test(blob) ||
+      /\b(unga klara|orionteatern|kulturhuset stadsteatern|teater brunnsgatan fyra|teatern i)\b/i.test(blob)
+    ) return "teater";
+
+    if (
+      /\b(live|konsert)\b/i.test(blob) ||
+      /\s\+\s/.test(title) ||
+      /\s\|\s/.test(title) ||
+      ["biljett.debaser.se", "biljett.kulturaktiebolaget.se", "shop.showtic.se"].includes(ticketHost) ||
+      /\b(debaser|nalen|fasching|kollektivet livet|södra teaterns stora scen|kägelbanan södra teatern|mosebacketerrassen|stallet - världens musik)\b/i.test(blob)
+    ) return "konsert";
+  }
 
   if (/\b(visning|guidad\s*visning)\b/i.test(blob)) return "visning";
   if (/\b(workshop|kurs|helgkurs|föredrag|foredrag|prova\s*på|lär\s*dig|lar\s*dig|binderi|keramik|broderi|måleri|maleri|teckning|collage|markram[eé])\b/i.test(blob)) return "workshop";
@@ -495,7 +526,7 @@ async function upsertEventPrefer(source, payload) {
 
   const { data: existing, error: selErr } = await supabase
     .from("events")
-    .select("id,source_rank,ticket_url,organizer_url,image_url,description,source_url,source_id")
+    .select("id,source_rank,ticket_url,organizer_url,image_url,image_url_original,image_storage_path,description,source_url,source_id,category,subcategory,audience,status")
     .eq("canonical_key", key)
     .maybeSingle();
 
@@ -578,6 +609,24 @@ async function upsertEventPrefer(source, payload) {
     if (!existing.description && payload.description) patch.description = payload.description;
     if (!existing.source_url && payload.source_url) patch.source_url = payload.source_url;
     if (!existing.source_id && payload.source_id) patch.source_id = payload.source_id;
+
+    // Same-source correction: allow category to be repaired on reimport
+    if (
+      existing.source_id === payload.source_id &&
+      payload.category &&
+      existing.category !== payload.category
+    ) {
+      patch.category = payload.category;
+    }
+
+    // Same-source correction: allow subcategory to be repaired on reimport
+    if (
+      existing.source_id === payload.source_id &&
+      payload.subcategory &&
+      existing.subcategory !== payload.subcategory
+    ) {
+      patch.subcategory = payload.subcategory;
+    }
   }
 
 
@@ -1405,9 +1454,12 @@ async function run() {
         const organizer = e.organizer_url || null;
         const ticketKey = clean(ticket || organizer || src) || "";
         const fingerprint = `${s.id}__${src}__${startISO}__${ticketKey}`;
-        const category = inferGenreCategory({ source: s, it: e }) ?? null;
         const audience = inferAudience({ source: s, it: e });
         const subcategory = e.subcategory ?? inferSubcategory({ source: s, it: e }) ?? null;
+        const category =
+          categoryFromSubcategory(subcategory) ??
+          inferGenreCategory({ source: { ...s, category: null }, it: e }) ??
+          null;
 
         await upsertEventPrefer(s, {
           source_id: s.id,
