@@ -26,6 +26,46 @@ function shouldIncludeTicketmasterEvent(ev) {
   return true;
 }
 
+function mapTicketmasterClassification(ev) {
+  const c = ev?.classifications?.[0] || {};
+  const segment = String(c?.segment?.name || "").toLowerCase();
+  const genre = String(c?.genre?.name || "").toLowerCase();
+  const subGenre = String(c?.subGenre?.name || "").toLowerCase();
+  const type = String(c?.type?.name || "").toLowerCase();
+  const subType = String(c?.subType?.name || "").toLowerCase();
+  const blob = [segment, genre, subGenre, type, subType].join(" ");
+
+  if (segment === "music") {
+    return { category: "musik", subcategory: "konsert" };
+  }
+
+  if (segment === "arts & theatre") {
+    if (genre === "comedy" || subGenre === "comedy") {
+      return { category: "standup", subcategory: "standup" };
+    }
+
+    if (genre === "dance" || subGenre === "dance") {
+      return { category: "teater", subcategory: "dans" };
+    }
+
+    if (subGenre === "musical" || /\bmusical\b/.test(blob)) {
+      return { category: "teater", subcategory: "musikal" };
+    }
+
+    if (genre === "theatre") {
+      return { category: "teater", subcategory: "teater" };
+    }
+  }
+
+  if (segment === "miscellaneous") {
+    if (genre === "fairs & festivals" || subGenre === "fairs & festivals") {
+      return { category: "ovrigt", subcategory: "festival" };
+    }
+  }
+
+  return { category: null, subcategory: null };
+}
+
 async function fetchTicketmasterPage({ apiKey, page, size, startDateTime }) {
   const url = new URL("https://app.ticketmaster.com/discovery/v2/events.json");
   url.searchParams.set("apikey", apiKey);
@@ -114,6 +154,7 @@ export async function importTicketmasterApi(source) {
 
     const priceMin = ev?.priceRanges?.[0]?.min ?? null;
     const priceMax = ev?.priceRanges?.[0]?.max ?? null;
+    const mapped = mapTicketmasterClassification(ev);
 
     return {
       title: ev?.name || "Untitled event",
@@ -127,6 +168,8 @@ export async function importTicketmasterApi(source) {
       price_min: priceMin,
       price_max: priceMax,
       price_type: priceMin === 0 ? "free" : (priceMin != null ? "paid" : "unknown"),
+      category: mapped.category,
+      subcategory: mapped.subcategory,
     };
   });
 
