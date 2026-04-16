@@ -277,7 +277,7 @@ function decodeHtmlEntities(input) {
 function extFromUrl(u) {
   try {
     const pathname = new URL(u).pathname.toLowerCase();
-    const m = pathname.match(/\.(jpg|jpeg|png|webp|gif)$/i);
+    const m = pathname.match(/\.(jpg|jpeg|png|webp|gif|avif)$/i);
     if (!m) return "jpg";
     const ext = m[1].toLowerCase();
     return ext === "jpeg" ? "jpg" : ext;
@@ -479,8 +479,12 @@ async function cacheImageToStorage(originalUrl) {
   const isWebp =
     buf.slice(0, 4).toString("ascii") === "RIFF" &&
     buf.slice(8, 12).toString("ascii") === "WEBP";
+  const isAvif =
+    buf.length >= 12 &&
+    buf.slice(4, 8).toString("ascii") === "ftyp" &&
+    ["avif", "avis"].includes(buf.slice(8, 12).toString("ascii"));
 
-  const looksLikeImage = isJpg || isPng || isGif || isWebp;
+  const looksLikeImage = isJpg || isPng || isGif || isWebp || isAvif;
   const isHtmlLike =
     ct.includes("text/html") ||
     ct.includes("application/xhtml") ||
@@ -502,7 +506,9 @@ async function cacheImageToStorage(originalUrl) {
           ? "image/webp"
           : ext === "gif"
             ? "image/gif"
-            : "image/jpeg";
+            : ext === "avif"
+              ? "image/avif"
+              : "image/jpeg";
 
   const up = await supabase.storage.from(EVENT_IMAGES_BUCKET).upload(path, buf, {
     contentType,

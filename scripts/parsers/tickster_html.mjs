@@ -91,11 +91,15 @@ export async function importTickster(source) {
     // Alla köpknappar med data-name är kandidater, oavsett partnerdomän.
     $("a[data-name][data-eventrequestcode]").each((_, a) => {
       const $a = $(a);
+      const $tile = $a.closest(".c-tile");
       const ticket_url = absolutize(pageUrl, $a.attr("href"));
       const title = clean($a.attr("data-name")) || null;
 
-      const $label = $a.closest("div").find("span.c-tile__label").first();
+      const $label = $tile.find("span.c-tile__label").first();
       const labelText = clean($label.text()) || null;
+
+      const $img = $tile.find(".c-tile__image img").first();
+      const image_url = absolutize(pageUrl, $img.attr("data-src") || $img.attr("src"));
 
       const start_at = labelText ? parseTicksterLabelDate(labelText) : null;
       const venue_name = labelText ? parseVenueFromLabel(labelText) : null;
@@ -111,6 +115,7 @@ export async function importTickster(source) {
         city,
         ticket_url,
         source_url: pageUrl,
+        image_url,
       });
     });
 
