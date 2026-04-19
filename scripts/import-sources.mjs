@@ -147,11 +147,161 @@ function inferSubcategory({ source, it }) {
   const isTickster = parser === "tickster_html" || sn.includes("tickster");
 
   if (isTickster) {
+    // Unicode-safe Tickster classification rules.
+    // Purpose: avoid brittle \b matching on å/ä/ö/é and classify broad nationwide Tickster sources.
+    const asciiBlob = blob
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[’´`]/g, "'")
+      .toLowerCase();
+
+    const asciiVenue = venue
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[’´`]/g, "'")
+      .toLowerCase();
+
+    const hasTicksterText = (...needles) =>
+      needles.some(n => asciiBlob.includes(String(n).toLowerCase()));
+
+    const hasTicksterVenue = (...needles) =>
+      needles.some(n => asciiVenue.includes(String(n).toLowerCase()));
+
+    if (hasTicksterText(
+      "standup", "stand-up", "komedi", "comedy", "skratta",
+      "carl stanley", "hampus hedstrom", "celeste barber",
+      "robin paulsson", "katrin sundberg", "dilan och moa"
+    )) return "standup";
+
+    if (
+      hasTicksterText(
+        "film pa bio", "filmen", "movie", "cinema",
+        "tal: svenska", "tal: engelska", "text: svenska",
+        "barnvisning", "barselevisning", "guidad", "guided tour",
+        "slottsvisning", "slottsentre", "entrebiljetter", "admission",
+        "visit turning torso", "turning torso", "explore ystad",
+        "bowie by sukita", "tours for abba", "afternoon tea: hatt couture"
+      ) ||
+      hasTicksterVenue(
+        "kino", "biograf", "flora biografteater",
+        "historiska museet", "etnografiska museet", "medelhavsmuseet",
+        "livrustkammaren", "waldemarsudde", "abba the museum",
+        "dunkers kulturhus", "turning torso"
+      )
+    ) return "visning";
+
+    if (hasTicksterText(
+      "workshop", "kurs", "skapande", "skapa ", "ateljen",
+      "prova pa", "kroki", "maleri", "pappersblommor",
+      "suminagashi", "ori-zome", "kalligrafi", "binderi",
+      "keramik", "broderi", "cacao ceremony", "yogabrunch",
+      "brunch", "provning", "tasting", "vinprovning", "vinlunch",
+      "vingelrundan", "olprovning", "whisky", "hantverksbira",
+      "middag", "dinner", "rakmacka", "bbq", "mixed grill",
+      "frukost med", "bokklubb"
+    )) return "workshop";
+
+    if (hasTicksterText(
+      "samtal", "foredrag", "boksamtal", "litteraturkvall",
+      "litt:", "deckarafton", "inspirationskvall", "presentation:",
+      "hur blev det", "internationella laget", "geopolitiken",
+      "konstantin den store", "alexander den store", "naomi oreskes",
+      "spotlight:", "bokklubbs"
+    )) return "föredrag";
+
+    if (
+      hasTicksterText(
+        "trav", "galopp", "hockey", "innebandy", "fotboll",
+        "kvalfinal", "beijer hockey games", "sverige vs",
+        "grekland vs", "finland -", "tjeckien -", "schweiz -",
+        "european league", "isshow", "paralympiatravet"
+      ) ||
+      hasTicksterVenue(
+        "solvalla", "jagersro", "goteborg galopp",
+        "catena arena", "idrottshallen", "kth-hallen", "aby arena"
+      )
+    ) return "sport";
+
+    if (hasTicksterText(
+      "nattklubb", "studentskiva", "mosspatagning",
+      "dayparty", "afterparty", "festival", "valborg", "rave",
+      "club ", "klubb", "party", "bresh", "dance your heart out",
+      "ecstatic dance", "club backspin", "club angel", "club ängel",
+      "bluewater nightclub", "outdoor after work", "city festival",
+      "summer on festival"
+    )) return "nattklubb";
+
+    if (
+      hasTicksterText(
+        "konsert", " live", "gospel", "orkester", "stadsorkester",
+        "big band", "kammarkonsert", "kammarmusik", "pianoafton",
+        "recital", "barockens", "operaduetter", "stabat mater",
+        "elton john tribute", "abba tribute", "bjorn afzelius",
+        "soul & gospel", "jazz", "tribute", "tengstrand", "gershwin",
+        "bobo stenson", "quilty", "franska trion", "danko jones",
+        "john holm", "dina ogon", "kiefer sutherland", "mark big band",
+        "purple haze", "steve 'n' seagulls", "torquedos",
+        "the barr brothers", "james yorkston", "irländsk afton",
+        "laila adele", "samuel ljungblahd", "the aristocrats"
+      ) ||
+      hasTicksterVenue(
+        "pustervik", "nefertiti", "tradgar'n", "tradgarden",
+        "musikens hus", "jazzklubben", "mejeriet", "babel", "medley",
+        "the tivoli", "biljardkompaniet", "monument", "berns",
+        "fashing", "nalen", "sodra teatern", "mosebacke"
+      )
+    ) return "konsert";
+
+    if (
+      hasTicksterText(
+        "teater", "forestallning", "lunchteater",
+        "en midsommarnattsdrom", "the father", "alice i draglandet",
+        "clowns in dystopia", "annonsen", "blodsbroder", "soderkakar",
+        "masthuggsteatern", "teodorateatern", "eugene onegin",
+        "opera", "cirkus", "dansforestallning", "elevforestallning",
+        "i ❤️ dance", "punkt und linie", "efva lilja",
+        "vart tog alla vettiga heterokarlar vagen"
+      ) ||
+      hasTicksterVenue(
+        "teater", "stadsteatern", "atalante", "3:e vaningen",
+        "salongen / landskrona teater",
+        "restaurangscenen / landskrona teater",
+        "playhouse teater"
+      )
+    ) return "teater";
+
     if (/\b(standup|komedi|comedy)\b/i.test(blob)) return "standup";
 
     if (/\bvernissage\b/i.test(blob)) return "övrigt";
 
     if (/\b(djungelboken|next to normal|legally blonde|musical)\b/i.test(blob)) return "musikal";
+
+    // Tickster nationwide rules: high-signal titles/venues from Stockholm, Göteborg and Malmö.
+    if (/\b(carl stanley|hampus hedstr[oö]m|celeste barber|robin paulsson|katrin sundberg)\b/i.test(blob)) return "standup";
+
+    if (
+      /\b(film p[åa] bio|filmen|movie|cinema|tal:\s*svenska|tal:\s*engelska|text:\s*svenska)\b/i.test(blob) ||
+      /\b(kino|biograf|biografteatern|flora biografteater)\b/i.test(venue)
+    ) return "visning";
+
+    if (
+      /\b(entr[eé]biljetter|admission|slottsentr[eé]|guidad|guidade|slottsvisning|visit turning torso|turning torso|explore ystad|bowie by sukita)\b/i.test(blob)
+    ) return "visning";
+
+    if (
+      /\b(provning|tasting|vinlunch|vingelrundan|wine mechanics|ölprovning|hantverksbira|middag|dinner|brunch)\b/i.test(blob) ||
+      /\b(två feta grisar|holy smoke bbq|wine mechanics)\b/i.test(venue)
+    ) return "workshop";
+
+    if (
+      /\b(blodsbröder|lunchteater|shakespeares dotter|zarah|en kvinnas kamp till duschen|ni hör vad jag tänker)\b/i.test(blob) ||
+      /\b(atalante|teater storan|falkenbergs stadsteater|slagthusets teater|lunds stadsteater|teatergläntan)\b/i.test(venue)
+    ) return "teater";
+
+    if (
+      /\b(pustervik|nefertiti|trädgår['´]?n|big stage|musikens hus|jazzklubben|mejeriet|babel|medley|the tivoli|biljardkompaniet|monument)\b/i.test(blob)
+    ) return "konsert";
+
 
     if (
       /\b(gästspel|opera|cirkus)\b/i.test(blob) ||
@@ -166,6 +316,30 @@ function inferSubcategory({ source, it }) {
       ["biljett.debaser.se", "biljett.kulturaktiebolaget.se", "shop.showtic.se"].includes(ticketHost) ||
       /\b(debaser|nalen|fasching|kollektivet livet|södra teaterns stora scen|kägelbanan södra teatern|mosebacketerrassen|stallet - världens musik)\b/i.test(blob)
     ) return "konsert";
+
+    // Unicode-safe Tickster fallbacks.
+    // JS \b is ASCII-only and can miss Swedish/accented terms like "slottsentré", "ölprovning", "föredrag".
+    if (/(stand\s*-?\s*up|standup|skratta|komedi|comedy|tom[aå]s kaminski|mogna ovuxna|alla heter victor|celeste barber|carl stanley|hampus hedstr[oö]m|robin paulsson|katrin sundberg|matt rife)/i.test(blob)) return "standup";
+
+    if (/(film p[åa] bio|filmen|film\b|bio\b|movie|cinema|tal:\s*svenska|tal:\s*engelska|text:\s*svenska|zita|filmhuset|kino|biograf|biografteatern|flora biografteater)/i.test(blob)) return "visning";
+
+    if (/(slottsentr[eé]|entr[eé]biljetter|admission|guidad|guidade|slottsvisning|visit turning torso|turning torso|explore ystad|bowie by sukita|tours? for abba fans|pilgrimsvandring|crime walks|lönnkrogar|blodbad|arrestsprängning|smugglare|sockerbruksdråp)/i.test(blob)) return "visning";
+
+    if (/(provning|tasting|vinlunch|vingelrundan|wine mechanics|ölprovning|hantverksbira|middag|dinner|brunch|afternoon tea|frukost med|kroki|skapa|atelj[eé]n|suminagashi|kalligrafi|workshop|kurs|föredrag|foredrag|föreläsning|samtal|boksamtal|litteraturkväll|deckarafton|presentation|inspirationskväll|hälsomässa|inspirationsdag|bokklubbs|prova på)/i.test(blob)) return "workshop";
+
+    if (/(m[äa]ssa|expo|card expo|eco nordica)/i.test(blob)) return "mässa";
+
+    if (/(trav|galopp|hockey|match|kval|ssl|beijer hockey games|european league|sverige\s+vs|finland\s*-|tjeckien\s*-|schweiz\s*-|grekland\s+vs|azerbajdzjan|paralympiatravet|jägersro|solvalla|åby arena|catena arena|idrottshallen|kth-hallen|göteborg galopp|wallenstam arena)/i.test(blob)) return "sport";
+
+    if (/(bamse|pappa kapsyl|pippi|barnvisning|sagoträff|små barn och stora föräldrar|familjesöndag|dinosaurielåtar|babblarna|bolibompa|alfons|pettson|findus|mamma mu)/i.test(blob)) return "barnteater";
+
+    if (/(isshow|visions on ice|dance your heart out|dansföreställning|dansforestallning|i ❤️ dance|dance-partille|balett|ballet)/i.test(blob)) return "dans";
+
+    if (/(teater:|lunchteater|midsommarnattsdröm|eugene onegin|älskade edith|teodorateatern|the father|jonah|masthuggsteatern|alice i draglandet|clowns in dystopia|om freden kommer|annonsen|två små vita bollar|playhouse teater|teatersalen|stadsteatern|landskrona teater|varbergs teater|helsingborgs stadsteater)/i.test(blob)) return "teater";
+
+    if (/(konsert|live|recital|opera|operaduetter|stabat mater|kammarkonsert|kammarmusik|pianoafton|orkester|gospel|ungdomskör|big band|tribute|elton john|abba tribute|björn afzelius|malena ernman|bobo stenson|quilty|primal scream|tricky|franska trion|tribulation|corroded|dolly style|oddisee|laibach|john holm|siena root|asme|timbuktu|cascada|kiefer sutherland|purple haze|mark big band|taube|sten & stanley|amanda ginsburg|dina ögon|forq|jamsession|steve 'n' seagulls|torquedos|soul summit|after midnight|sator trio|laila ad[eé]le|samuel ljungblahd|tengstrand|gershwin|monbijoukvartetten|mattias nilsson|trummor & orgel|danko jones)/i.test(blob)) return "konsert";
+
+    if (/(studentskiva|studentbal|balen 2026|mösspåtagning|mossapåtagning|nattklubb|dayparty|dagsfest|afterparty|party night|club backspin|club ängel|valborg|festival|rave|premiärhelg kl terrassen|bresh)/i.test(blob)) return "nattklubb";
   }
 
   if (/\b(visning|guidad\s*visning)\b/i.test(blob)) return "visning";
@@ -1600,6 +1774,11 @@ if (parser === "html" || HTML_PARSERS[parser]) {
         const startISO = new Date(t).toISOString();
         const title = it.title || "Untitled event";
         const aud = inferAudience({ source: s, it: { ...it, title } });
+        const subcategory = it.subcategory ?? inferSubcategory({ source: s, it }) ?? null;
+        const category =
+          categoryFromSubcategory(subcategory) ??
+          inferGenreCategory({ source: s, it }) ??
+          null;
 
         const ticket = it.ticket_url || null;
         const src = it.source_url || s.url;
@@ -1614,9 +1793,9 @@ if (parser === "html" || HTML_PARSERS[parser]) {
           fingerprint,
           title: title,
           description: it.description || null,
-          category: inferGenreCategory({ source: s, it }) ?? null,
+          category,
             audience: aud,
-            subcategory: it.subcategory ?? inferSubcategory({ source: s, it }) ?? null,
+            subcategory,
           start_at: startISO,
           end_at: it.end_at || null,
           city: it.city || s.city || null,
