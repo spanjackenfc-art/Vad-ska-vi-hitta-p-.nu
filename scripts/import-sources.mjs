@@ -88,6 +88,135 @@ function inferAudience({ source, it }) {
   return null;
 }
 
+
+function inferTicksterActualCity({ source, venueName }) {
+  const parser = String(source?.parser || "").toLowerCase();
+  const url = String(source?.url || "").toLowerCase();
+
+  // Only Tickster "near" pages are catchment-area pages.
+  // Do not touch normal city pages such as /events/in/stockholm.
+  if (parser !== "tickster_html" || !url.includes("/events/near/")) return null;
+
+  const raw = String(venueName || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!raw) return null;
+
+  const normalize = (value) =>
+    String(value || "")
+      .normalize("NFC")
+      .toLowerCase()
+      .replace(/[.!?;:]+$/g, "")
+      .trim();
+
+  const exactCity = new Map([
+    ["göteborg", "Göteborg"],
+    ["mölndal", "Mölndal"],
+    ["mölnlycke", "Mölnlycke"],
+    ["torslanda", "Torslanda"],
+    ["partille", "Partille"],
+    ["lerum", "Lerum"],
+    ["alingsås", "Alingsås"],
+    ["borås", "Borås"],
+    ["trollhättan", "Trollhättan"],
+    ["varberg", "Varberg"],
+    ["falkenberg", "Falkenberg"],
+    ["fjärås", "Fjärås"],
+    ["kungsbacka", "Kungsbacka"],
+    ["stenungsund", "Stenungsund"],
+    ["hönö", "Hönö"],
+    ["brålanda", "Brålanda"],
+    ["uddevalla", "Uddevalla"],
+    ["bohus björkö", "Bohus Björkö"],
+    ["fiskebäckskil", "Fiskebäckskil"],
+    ["marstrand", "Marstrand"],
+    ["rävlanda", "Rävlanda"],
+
+    ["malmö", "Malmö"],
+    ["lund", "Lund"],
+    ["helsingborg", "Helsingborg"],
+    ["ystad", "Ystad"],
+    ["sjöbo", "Sjöbo"],
+    ["ängelholm", "Ängelholm"],
+    ["kristianstad", "Kristianstad"],
+    ["landskrona", "Landskrona"],
+    ["båstad", "Båstad"],
+    ["höör", "Höör"],
+    ["tomelilla", "Tomelilla"],
+    ["trelleborg", "Trelleborg"],
+    ["nyhamnsläge", "Nyhamnsläge"],
+    ["löderup", "Löderup"],
+    ["tyringe", "Tyringe"],
+    ["åstorp", "Åstorp"],
+    ["örkelljunga", "Örkelljunga"],
+    ["kågeröd", "Kågeröd"],
+    ["hjärnarp", "Hjärnarp"],
+    ["vollsjö", "Vollsjö"],
+  ]);
+
+  // Strongest signal: "Venue, City"
+  if (raw.includes(",")) {
+    const last = raw.split(",").pop();
+    const direct = exactCity.get(normalize(last));
+    if (direct) return direct;
+  }
+
+  const hay = ` ${normalize(raw)} `;
+  const cityPatterns = [
+    ["Göteborg", /(^|[^a-zåäö])göteborg([^a-zåäö]|$)/],
+    ["Mölndal", /(^|[^a-zåäö])mölndal([^a-zåäö]|$)/],
+    ["Mölnlycke", /(^|[^a-zåäö])mölnlycke([^a-zåäö]|$)/],
+    ["Torslanda", /(^|[^a-zåäö])torslanda([^a-zåäö]|$)/],
+    ["Partille", /(^|[^a-zåäö])partille([^a-zåäö]|$)/],
+    ["Lerum", /(^|[^a-zåäö])lerum([^a-zåäö]|$)/],
+    ["Alingsås", /(^|[^a-zåäö])alingsås([^a-zåäö]|$)/],
+    ["Borås", /(^|[^a-zåäö])borås([^a-zåäö]|$)/],
+    ["Trollhättan", /(^|[^a-zåäö])trollhättan([^a-zåäö]|$)/],
+    ["Varberg", /(^|[^a-zåäö])varbergs?([^a-zåäö]|$)/],
+    ["Falkenberg", /(^|[^a-zåäö])falkenbergs?([^a-zåäö]|$)/],
+    ["Fjärås", /(^|[^a-zåäö])fjärås([^a-zåäö]|$)/],
+    ["Kungsbacka", /(^|[^a-zåäö])kungsbacka([^a-zåäö]|$)/],
+    ["Stenungsund", /(^|[^a-zåäö])stenungsund([^a-zåäö]|$)/],
+    ["Hönö", /(^|[^a-zåäö])hönö([^a-zåäö]|$)/],
+    ["Brålanda", /(^|[^a-zåäö])brålanda([^a-zåäö]|$)/],
+    ["Uddevalla", /(^|[^a-zåäö])uddevalla([^a-zåäö]|$)/],
+    ["Bohus Björkö", /(^|[^a-zåäö])bohus björkö([^a-zåäö]|$)/],
+    ["Fiskebäckskil", /(^|[^a-zåäö])fiskebäckskil([^a-zåäö]|$)/],
+    ["Marstrand", /(^|[^a-zåäö])marstrand([^a-zåäö]|$)/],
+    ["Rävlanda", /(^|[^a-zåäö])rävlanda([^a-zåäö]|$)/],
+
+    ["Malmö", /(^|[^a-zåäö])malmö([^a-zåäö]|$)/],
+    ["Lund", /(^|[^a-zåäö])lunds?([^a-zåäö]|$)/],
+    ["Helsingborg", /(^|[^a-zåäö])helsingborg([^a-zåäö]|$)/],
+    ["Ystad", /(^|[^a-zåäö])ystad([^a-zåäö]|$)/],
+    ["Sjöbo", /(^|[^a-zåäö])sjöbo([^a-zåäö]|$)/],
+    ["Ängelholm", /(^|[^a-zåäö])ängelholm([^a-zåäö]|$)/],
+    ["Kristianstad", /(^|[^a-zåäö])kristianstad([^a-zåäö]|$)/],
+    ["Landskrona", /(^|[^a-zåäö])landskrona([^a-zåäö]|$)/],
+    ["Båstad", /(^|[^a-zåäö])båstad([^a-zåäö]|$)/],
+    ["Höör", /(^|[^a-zåäö])höör([^a-zåäö]|$)/],
+    ["Tomelilla", /(^|[^a-zåäö])tomelilla([^a-zåäö]|$)/],
+    ["Trelleborg", /(^|[^a-zåäö])trelleborg([^a-zåäö]|$)/],
+    ["Nyhamnsläge", /(^|[^a-zåäö])nyhamnsläge([^a-zåäö]|$)/],
+    ["Löderup", /(^|[^a-zåäö])löderup([^a-zåäö]|$)/],
+    ["Tyringe", /(^|[^a-zåäö])tyringe([^a-zåäö]|$)/],
+    ["Åstorp", /(^|[^a-zåäö])åstorp([^a-zåäö]|$)/],
+    ["Örkelljunga", /(^|[^a-zåäö])örkelljunga([^a-zåäö]|$)/],
+    ["Kågeröd", /(^|[^a-zåäö])kågeröd([^a-zåäö]|$)/],
+    ["Hjärnarp", /(^|[^a-zåäö])hjärnarp([^a-zåäö]|$)/],
+    ["Vollsjö", /(^|[^a-zåäö])vollsjö([^a-zåäö]|$)/],
+  ];
+
+  for (const [city, re] of cityPatterns) {
+    if (re.test(hay)) return city;
+  }
+
+  return null;
+}
+
+
 function categoryFromSubcategory(subRaw) {
   const sub = String(subRaw || "").toLowerCase().trim();
   if (!sub) return null;
@@ -842,6 +971,17 @@ async function upsertEventPrefer(source, payload) {
     }
   }
 
+
+  // Same-source correction: allow city to be repaired on reimport.
+  // This is needed when a catchment-area source previously stored source.city
+  // instead of the event's actual city from venue_name.
+  if (
+    existing.source_id === payload.source_id &&
+    payload.city &&
+    existing.city !== payload.city
+  ) {
+    patch.city = payload.city;
+  }
 
   // Reactivate rows we see again in a successful import
   if (payload.status === "active" && existing.status !== "active") {
@@ -1661,7 +1801,8 @@ async function run() {
 
         const title = e.title || "Untitled event";
         const startISO = new Date(t).toISOString();
-        const city = e.city || s.city || "Stockholm";
+        const inferredTicksterCity = inferTicksterActualCity({ source: s, venueName: e.venue_name });
+        const city = inferredTicksterCity || e.city || s.city || "Stockholm";
         const src = e.source_url || s.url;
         const ticket = e.ticket_url || null;
         const organizer = e.organizer_url || null;
