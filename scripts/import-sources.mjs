@@ -270,22 +270,51 @@ function inferSubcategory({ source, it }) {
       )
     ) return "teater";
 
-    if (/\b(standup|komedi|comedy)\b/i.test(blob)) return "standup";
+    if (/(standup|stand-up|komedi|comedy|skratta|humor)/i.test(blob)) return "standup";
 
-    if (/\bvernissage\b/i.test(blob)) return "övrigt";
+    if (/vernissage/i.test(blob)) return "visning";
 
-    if (/\b(djungelboken|next to normal|legally blonde|musical)\b/i.test(blob)) return "musikal";
+    if (/(djungelboken|next to normal|legally blonde|musical|musikal)/i.test(blob)) return "musikal";
+
+    if (/(bamse|pappa kapsyl|pippi|barnvisning|barnteater|familjesöndag|familjesondag|små barn|sma barn|dinosaurielåtar|dinosaurielatar)/i.test(blob)) return "barnteater";
+
+
+    // Tickster extra hard-unresolved cleanup: museums, family, classical/music, sports and venue-specific leftovers.
+    if (
+      /\b(slottsentr[eé]|guidad slottsvisning|afternoon tea|tours? for abba fans|pilgrimsvandring|specialvisning|sagoträffar|barnvisning|30 minuter om|prova på|skapa\s*&\s*skåla|skapa din egen|visit turning torso|explore ystad)\b/i.test(blob) ||
+      /\b(livrustkammaren|etnografiska museet|medelhavsmuseet|historiska museet|waldemarsudde|thielska galleriet|abba the museum|turning torso)\b/i.test(venue)
+    ) return "visning";
+
+    if (
+      /\b(familjesöndag|pappa kapsyl|små barn och stora föräldrar|bamse|pippi|barnteater|dinosaurielåtar|super mario|ateljén)\b/i.test(blob)
+    ) return "visning";
+
+    if (
+      /\b(barockens pärlor|operaduetter|stabat mater|kammarmusik|pianoafton|ungdomskör|vasagospel|vokal vårfest|orkester|stadsorkester|gospel|kyrkokonsert|kör|kören|odeum|monbijoukvartetten|björn afzelius|elz\b|elove\b|mark big band|purple haze|ted\b|elton john tribute|danko jones|siena root|john holm|quilty|franska trion|primal scream|tricky)\b/i.test(blob) ||
+      /\b(kyrka|konserthus|konsertsalen|nefertiti|pustervik|mejeriet|babel|medley|filmstudion|varbergs teater|majas vid havet|science village hall|salongen \/ landskrona teater)\b/i.test(venue)
+    ) return "konsert";
+
+    if (
+      /\b(galopp|trav|hockey|innebandy|ssl|kvalfinal|beijer hockey games|european league|sverige vs|finland -|tjeckien -|schweiz -|kvalvinnare)\b/i.test(blob) ||
+      /\b(solvalla|jägersro|catena arena|idrottshallen|åby arena|göteborg galopp)\b/i.test(venue)
+    ) return "sport";
+
+    if (
+      /\b(stand up yours|skratta s\d+e\d+|dilan och moa|alla heter victor|mogna ovuxna)\b/i.test(blob) ||
+      /\b(fat daves|reimersholme hotel)\b/i.test(venue)
+    ) return "standup";
+
 
     // Tickster nationwide rules: high-signal titles/venues from Stockholm, Göteborg and Malmö.
     if (/\b(carl stanley|hampus hedstr[oö]m|celeste barber|robin paulsson|katrin sundberg)\b/i.test(blob)) return "standup";
 
     if (
-      /\b(film p[åa] bio|filmen|movie|cinema|tal:\s*svenska|tal:\s*engelska|text:\s*svenska)\b/i.test(blob) ||
-      /\b(kino|biograf|biografteatern|flora biografteater)\b/i.test(venue)
+      /(film p[åa] bio|filmen|movie|cinema|tal:\s*svenska|tal:\s*engelska|text:\s*svenska)/i.test(blob) ||
+      /(kino|biograf|biografteatern|flora biografteater|filmhuset|zita)/i.test(venue)
     ) return "visning";
 
     if (
-      /\b(entr[eé]biljetter|admission|slottsentr[eé]|guidad|guidade|slottsvisning|visit turning torso|turning torso|explore ystad|bowie by sukita)\b/i.test(blob)
+      /(entr[eé]biljetter|admission|slottsentr[eé]|guidad|guidade|slottsvisning|visit turning torso|turning torso|explore ystad|bowie by sukita|visning|afternoon tea|tours for abba fans)/i.test(blob)
     ) return "visning";
 
     if (
@@ -299,14 +328,18 @@ function inferSubcategory({ source, it }) {
     ) return "teater";
 
     if (
-      /\b(pustervik|nefertiti|trädgår['´]?n|big stage|musikens hus|jazzklubben|mejeriet|babel|medley|the tivoli|biljardkompaniet|monument)\b/i.test(blob)
+      /(pustervik|nefertiti|trädgår['´]?n|tradgard['´]?n|big stage|musikens hus|jazzklubben|mejeriet|babel|medley|the tivoli|biljardkompaniet|monument|filmstudion|grand malmö|grand malmo|slagthuset|moriska paviljongen|berns|fållan|fryshuset)/i.test(blob)
+    ) return "konsert";
+
+    if (
+      /(barockens pärlor|operaduetter|stabat mater|purple haze|sten & stanley|mark big band|elove|the neats|gasbox|kim larsen|attentat|trummor & orgel|quilty|primal scream|tricky|dolly style|odeum|vokal vårfest|laila adèle|samuel ljungblahd|soul & gospel|sånger till friheten|björn afzelius|tengstrand|gershwin|stadsorkester|bobo stenson|malena ernman|konsert|tribute|jazz|gospel|orkester|kör|kor|kyrka)/i.test(blob)
     ) return "konsert";
 
 
     if (
-      /\b(gästspel|opera|cirkus)\b/i.test(blob) ||
-      /\b(nattorienterarna|fullmåne|forever young)\b/i.test(blob) ||
-      /\b(unga klara|orionteatern|kulturhuset stadsteatern|teater brunnsgatan fyra)\b/i.test(blob)
+      /(gästspel|gastspel|opera|cirkus|circus|teater|föreställning|forestallning|dansföreställning|lunchteater|en midsommarnattsdröm|the father|alice i draglandet|clowns in dystopia)/i.test(blob) ||
+      /(nattorienterarna|fullmåne|fullmane|forever young)/i.test(blob) ||
+      /(unga klara|orionteatern|kulturhuset stadsteatern|teater brunnsgatan fyra|playhouse teater|maxim|atalante|varbergs teater|lunds stadsteater|landskrona teater|falkenbergs stadsteater|teater storan)/i.test(blob)
     ) return "teater";
 
     if (
