@@ -274,6 +274,8 @@ function inferSubcategory({ source, it }) {
     }
   })();
   const isTickster = parser === "tickster_html" || sn.includes("tickster");
+  const isKulturbiljetter =
+    parser.startsWith("kulturbiljetter_") || sn.includes("kulturbiljetter");
 
   if (isTickster) {
     // Unicode-safe Tickster classification rules.
@@ -502,6 +504,19 @@ function inferSubcategory({ source, it }) {
     if (/(konsert|live|recital|opera|operaduetter|stabat mater|kammarkonsert|kammarmusik|pianoafton|orkester|gospel|ungdomskör|big band|tribute|elton john|abba tribute|björn afzelius|malena ernman|bobo stenson|quilty|primal scream|tricky|franska trion|tribulation|corroded|dolly style|oddisee|laibach|john holm|siena root|asme|timbuktu|cascada|kiefer sutherland|purple haze|mark big band|taube|sten & stanley|amanda ginsburg|dina ögon|forq|jamsession|steve 'n' seagulls|torquedos|soul summit|after midnight|sator trio|laila ad[eé]le|samuel ljungblahd|tengstrand|gershwin|monbijoukvartetten|mattias nilsson|trummor & orgel|danko jones)/i.test(blob)) return "konsert";
 
     if (/(studentskiva|studentbal|balen 2026|mösspåtagning|mossapåtagning|nattklubb|dayparty|dagsfest|afterparty|party night|club backspin|club ängel|valborg|festival|rave|premiärhelg kl terrassen|bresh)/i.test(blob)) return "nattklubb";
+  }
+
+  if (isKulturbiljetter) {
+    const familyLike =
+      inferAudience({ source, it }) === "familj" ||
+      /\b(barn|familj|familjef[öo]rest[äa]llning|barnteater)\b/i.test(blob) ||
+      /\(\s*\d+(?:[.,]\d+)?\s*[–-]\s*\d+(?:[.,]\d+)?\s*år\s*\)/i.test(blob) ||
+      /\b\d+(?:[.,]\d+)?\s*[–-]\s*\d+(?:[.,]\d+)?\s*år\b/i.test(blob) ||
+      /\b\d+\s*[–-]\s*\d+\s*mån\b/i.test(blob) ||
+      /\b\d+\s*mån\b/i.test(blob);
+
+    if (familyLike) return "barnteater";
+    return "teater";
   }
 
   if (/\b(visning|guidad\s*visning)\b/i.test(blob)) return "visning";
