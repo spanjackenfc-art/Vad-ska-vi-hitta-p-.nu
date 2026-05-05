@@ -4,6 +4,8 @@ import NewsletterPopup from "./_components/NewsletterPopup";
 
 import DescriptionToggle from "./_components/DescriptionToggle";
 import Hero from "./_components/Hero";
+import AiRecommendBox from "./_components/AiRecommendBox";
+import TrackedLink from "./_components/TrackedLink";
 // === Category UI mapping ===
 const CATEGORY_UI_MAP = {
   kultur: { label: "Teater", slug: "teater" },
@@ -545,6 +547,37 @@ const price = firstParam(sp.price).trim();
 // Category filtering is applied in the DB query (keeps pagination/count deterministic)
 const eventsForList = (eventsDeduped as EventRow[]);
 
+  const reviewEventIds = Array.from(new Set((eventsForList || []).map((e: any) => String(e?.id || "")).filter(Boolean)));
+
+  const { data: reviewsRaw } = reviewEventIds.length
+    ? await supabase
+        .from("reviews")
+        .select("event_id,rating,text,created_at")
+        .in("event_id", reviewEventIds)
+        .order("created_at", { ascending: false })
+        .limit(5000)
+    : ({ data: [] as any[] } as any);
+
+  const reviewStatsByEvent = new Map<string, { count: number; avg: number; latestText: string | null }>();
+  for (const [eventId, rows] of Object.entries(
+    (reviewsRaw || []).reduce((acc: Record<string, any[]>, row: any) => {
+      const id = String(row?.event_id || "");
+      if (!id) return acc;
+      (acc[id] ||= []).push(row);
+      return acc;
+    }, {})
+  )) {
+    const list = rows as any[];
+    const count = list.length;
+    const avg = count ? list.reduce((sum, r) => sum + Number(r?.rating || 0), 0) / count : 0;
+    const latestText = list.find((r) => String(r?.text || "").trim())?.text ?? null;
+    reviewStatsByEvent.set(String(eventId), {
+      count,
+      avg: Number(avg.toFixed(1)),
+      latestText: latestText ? String(latestText) : null,
+    });
+  }
+
   if (DEBUG) {
     const go = (eventsForList || []).filter((e:any) => String(e?.venue_name||" ").toLowerCase().includes("göteborgsoperan")).slice(0, 12);
     console.log("[DBG_GBG_OPERA_LIST]", go.map((e:any)=>({id:e.id,title:(e.title||"").slice(0,60), image_url:e.image_url, img: bestImageSrc(e)})));
@@ -591,11 +624,11 @@ const eventsForList = (eventsDeduped as EventRow[]);
 
   // === Rail (sidopanel) — LOCKED / curated (never changes with filters) ===
   const RAIL_IDS = [
-    "740ec753-3c49-437d-9185-7cee21ca1493", // Evigt Edvin
-    "e0d85a4a-50da-4f56-81c7-1ecc1174b51e", // Sweet sixteen
-    "3b0cf550-dc03-47ac-88d2-c3ae7ecf2aec", // Trad On The Prom
-    "261d5297-2e2f-4f2f-8c46-2f88063ea82f", // Den gröna jättekvinnan
-    "91203abb-759e-441d-af87-b82e110799b7", // Bygdespelet Höga Kusten
+    "760dc1fa-83b8-492c-aa8a-8b4c490ae5f2", // Legally Blonde
+    "03042602-b666-4315-b1c3-265b6092402f", // One Of These Nights
+    "49186e5a-9a0c-4fb0-8814-1b987d62eccd", // Slutspel
+    "b6b91b66-2868-47a0-bc26-31d8b6dc50a8", // Kris, kaos & katastrof - världspremiär
+    "9eb4ac61-812d-4dbd-867c-7b83560d7513", // Stephen Wilson Jr.
   ];
 
   const { data: railPinnedRaw } = await supabase
@@ -615,42 +648,42 @@ const hasPrev = page > 1;
 const hasNext = page < totalPages;
 
 
-  // === Sponsorships (server-side) ===
-  const nowTs = new Date().toISOString();
+  // === Sponsorships / curated placements (locked) ===
+  const heroSponsorship = {
+    package: "P4",
+    placement: "hero_banner",
+    event_id: "1f142b96-b07d-4037-9586-b9fb2f8d0266", // Arne Alligator
+    title: null,
+    image_url: null,
+    cta_url: null,
+  } as any;
 
-  // 2 slots: 1) hero under hero-sektionen  2) infeed-banner längre ner
-  const { data: heroSponsRows } = await supabase
-    .from("sponsorships")
-    .select("id, package, placement, event_id, title, image_url, cta_url, starts_at, ends_at, priority, is_active")
-    .eq("is_active", true)
-    .eq("placement", "hero_banner")
-    .lte("starts_at", nowTs)
-    .gte("ends_at", nowTs)
-    .order("priority", { ascending: true })
-    .limit(2);
+  const infeedSponsorship = {
+    package: "P4",
+    placement: "infeed_banner_1",
+    event_id: "cc0679ac-c83a-4dcc-bdbe-3af6363b7799", // Trollhättan Jazz & Blues 2026
+    title: null,
+    image_url: null,
+    cta_url: null,
+  } as any;
 
-  const heroSponsorship = (heroSponsRows?.[0] ?? null) as any;
-  const infeedSponsorship = (heroSponsRows?.[1] ?? null) as any;
+  const infeedSponsorship2 = {
+    package: "P4",
+    placement: "infeed_banner_2",
+    event_id: "bebe1e07-b206-43a8-85c1-9b441143700b", // MAMMA MIA! THE PARTY
+    title: null,
+    image_url: null,
+    cta_url: null,
+  } as any;
 
-  // Topplistan (3 slots)
-  const { data: topSponsRows } = await supabase
-    .from("sponsorships")
-    .select("id, package, placement, event_id, title, image_url, cta_url, starts_at, ends_at, priority, is_active")
-    .eq("is_active", true)
-    .eq("placement", "listing_top")
-    .lte("starts_at", nowTs)
-    .gte("ends_at", nowTs)
-    .order("priority", { ascending: true })
-    .limit(3);
-
-  const topSponsorships = (topSponsRows ?? []) as any[];
-
+  const topSponsorships: any[] = [];
 
   const sponsorEventIds = Array.from(
     new Set(
       [
         heroSponsorship?.event_id,
         infeedSponsorship?.event_id,
+        infeedSponsorship2?.event_id,
         ...topSponsorships.map((x) => x?.event_id),
       ].filter(Boolean)
     )
@@ -659,8 +692,7 @@ const hasNext = page < totalPages;
   const { data: sponsorEventsRaw } = sponsorEventIds.length
     ? await supabase
         .from("public_events_with_cta")
-    .select("*")
-    .gte("start_at", nowISO) // hide past events
+        .select("*")
         .in("id", sponsorEventIds)
     : ({ data: [] as any[] } as any);
 
@@ -675,14 +707,66 @@ const hasNext = page < totalPages;
   const infeedEvent = infeedSponsorship?.event_id
     ? (sponsorEventsById.get(String(infeedSponsorship.event_id)) ?? null)
     : null;
-  const infeedItems: any[] = [...eventsForList];
 
-const topSponsored = topSponsorships
+  const infeedEvent2 = infeedSponsorship2?.event_id
+    ? (sponsorEventsById.get(String(infeedSponsorship2.event_id)) ?? null)
+    : null;
+
+  const infeedItems: any[] = [];
+  for (let i = 0; i < eventsForList.length; i += 1) {
+    infeedItems.push(eventsForList[i]);
+    if (i === 8 && infeedEvent) {
+      infeedItems.push({ __kind: "infeed_sponsor", __slot: 1 });
+    }
+    if (i === 17 && infeedEvent2) {
+      infeedItems.push({ __kind: "infeed_sponsor", __slot: 2 });
+    }
+  }
+
+  const topSponsored = topSponsorships
     .map((sp) => ({
       sp,
       ev: sponsorEventsById.get(String(sp.event_id)),
     }))
     .filter((x) => Boolean(x.ev));
+
+  const clicksSinceISO = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: recentClicks } = await supabase
+    .from("clicks")
+    .select("event_id,created_at")
+    .gte("created_at", clicksSinceISO)
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  const popularClickCounts = new Map<string, number>();
+  for (const row of (recentClicks ?? []) as any[]) {
+    const id = String(row?.event_id || "");
+    if (!id) continue;
+    popularClickCounts.set(id, (popularClickCounts.get(id) || 0) + 1);
+  }
+
+  const popularIds = Array.from(popularClickCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([id]) => id);
+
+  const { data: popularRaw } = popularIds.length
+    ? await supabase
+        .from("public_events_with_cta")
+        .select("*")
+        .gte("start_at", nowISO)
+        .in("id", popularIds)
+    : ({ data: [] as any[] } as any);
+
+  const popularById = new Map<string, any>((popularRaw ?? []).map((e: any) => [String(e.id), e]));
+  const popularEvents = popularIds
+    .map((id) => {
+      const ev = popularById.get(String(id));
+      if (!ev) return null;
+      return { ev, clicks: popularClickCounts.get(String(id)) || 0 };
+    })
+    .filter(Boolean);
 
   const normalizeCityOption = (raw: string) => {
     let x = String(raw || "").trim();
@@ -796,6 +880,7 @@ return (
 
       {/* Hero */}
       <Hero />
+      <AiRecommendBox />
       {heroSponsorship ? (
         <section className="mx-auto max-w-6xl px-6 pt-4">
           <div className="rounded-3xl bg-white ring-2 ring-slate-900/10 shadow-xl overflow-hidden">
@@ -949,6 +1034,47 @@ return (
             </div>
 
 
+            {popularEvents.length ? (
+              <div className="mt-6">
+                <div className="flex items-baseline justify-between">
+                  <h3 className="text-sm font-semibold">Populärt just nu</h3>
+                  <span className="text-xs text-slate-500">Senaste 7 dagarna</span>
+                </div>
+                <div className="mt-3 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list">
+                  {popularEvents.slice(0, 6).map((x: any, i: number) => (
+                    <div role="listitem" key={String(x.ev.id) + "-popular-" + i} className="list-none">
+                      <TrackedLink
+                        href={String(x.ev.ticket_url || x.ev.source_url || "#")}
+                        target="_blank"
+                        rel="noreferrer"
+                        eventId={x.ev.id}
+                        clickSource="popular_card"
+                        className="block rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden hover:bg-slate-50"
+                      >
+                        <img
+                          src={String(bestImageSrc(x.ev))}
+                          alt={String(x.ev.title || "Populärt event")}
+                          className="h-36 w-full object-cover"
+                          loading="lazy"
+                        />
+                        <div className="p-4">
+                          <div className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                            {x.clicks} klick
+                          </div>
+                          <div className="mt-2 text-base font-semibold tracking-tight text-slate-900">
+                            {String(x.ev.title || "")}
+                          </div>
+                          <div className="mt-1 text-[12px] text-slate-600 line-clamp-1">
+                            {String(x.ev.venue_name || x.ev.city || "")}
+                          </div>
+                        </div>
+                      </TrackedLink>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {topSponsored.length ? (
               <div className="mt-6">
                 <div className="flex items-baseline justify-between">
@@ -1004,25 +1130,56 @@ return (
               ) : (
 
                 infeedItems.map((e: any) => {
+
                   if (e && e.__kind === "infeed_sponsor") {
-                    const href = String(infeedSponsorship?.cta_url || infeedEvent?.ticket_url || infeedEvent?.source_url || "#");
-                    const img = String(
-                      infeedSponsorship?.image_url ||
-                        infeedEvent?.image_url ||
-                        bestImageSrc(infeedEvent || { category: "övrigt" })
+                    const sponsorSlot = e.__slot === 2 ? 2 : 1;
+                    const sponsor = sponsorSlot === 2 ? infeedSponsorship2 : infeedSponsorship;
+                    const sponsorEvent = sponsorSlot === 2 ? infeedEvent2 : infeedEvent;
+
+                    const href = String(
+                      sponsor?.cta_url ||
+                      sponsorEvent?.ticket_url ||
+                      sponsorEvent?.source_url ||
+                      "#"
                     );
-                    const title = String(infeedSponsorship?.title || infeedEvent?.title || "Sponsrat");
+
+                    const img = String(
+                      sponsor?.image_url ||
+                      sponsorEvent?.image_url ||
+                      bestImageSrc(sponsorEvent || { category: "övrigt" })
+                    );
+
+                    const title = String(
+                      sponsor?.title ||
+                      sponsorEvent?.title ||
+                      "Sponsrat"
+                    );
+
                     return (
-                      <div role="listitem" key="infeed-sponsor" className="sm:col-span-2 lg:col-span-3">
+                      <div
+                        role="listitem"
+                        key={"infeed-sponsor-" + String(sponsorSlot)}
+                        className="sm:col-span-2 lg:col-span-3"
+                      >
                         <div className="rounded-3xl bg-white ring-2 ring-slate-900/10 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-0.5">
-                          <a href={href} target="_blank" rel="noreferrer" className="block">
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block"
+                          >
                             <div className="flex flex-col sm:flex-row">
                               <div className="sm:w-72 w-full bg-slate-50 relative">
-                                <img src={img} alt={title} className="h-56 w-full object-cover" loading="lazy" />
-                      <div className="PARTNER-BADGE absolute top-3 left-3 rounded-full bg-slate-900/90 px-3 py-1 text-xs font-semibold text-white shadow-sm ring-1 ring-white/20">
-                        Partner (P4)
-                      </div>
-                      </div>
+                                <img
+                                  src={img}
+                                  alt={title}
+                                  className="h-56 w-full object-cover"
+                                  loading="lazy"
+                                />
+                                <div className="PARTNER-BADGE absolute top-3 left-3 rounded-full bg-slate-900/90 px-3 py-1 text-xs font-semibold text-white shadow-sm ring-1 ring-white/20">
+                                  Partner (P4)
+                                </div>
+                              </div>
                               <div className="p-7 flex-1 bg-gradient-to-br from-white via-white to-slate-50">
                                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                   Sponsrat · Partner (P4)
@@ -1031,7 +1188,7 @@ return (
                                   {title}
                                 </div>
                                 <div className="mt-2 text-sm text-slate-600">
-                                  Partnerplacering i flödet
+                                  {sponsorSlot === 1 ? "Partnerplacering efter rad 3" : "Partnerplacering efter rad 6"}
                                 </div>
                                 <div className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-6 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 active:scale-[0.99]">
                                   Gå till event
@@ -1043,8 +1200,6 @@ return (
                       </div>
                     );
                   }
-
-
 
                   const dt = safeDate(e.start_at);
                   if (!dt) return null;
@@ -1179,13 +1334,23 @@ if (isGuidedTour && (!e.image_url || String(e.image_url).trim() === "")) {
 
             
 
-                          <div className="mt-1 text-sm text-slate-600">
+                          <DescriptionToggle text={e.description_text} />
 
-                            {e.description_text ? String(e.description_text).replace(/\s+/g," ").trim().slice(0,220) : "—"}
-
-                          </div>
-
-            
+                          {(() => {
+                            const review = reviewStatsByEvent.get(String(e.id));
+                            return review ? (
+                              <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+                                <div className="font-medium">
+                                  {review.avg.toFixed(1)} / 5 i snitt · {review.count} recension{review.count === 1 ? "" : "er"}
+                                </div>
+                                {review.latestText ? (
+                                  <div className="mt-1 text-amber-800">
+                                    “{String(review.latestText).slice(0, 140)}{String(review.latestText).length > 140 ? "…" : ""}”
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null;
+                          })()}
 
                           <div className="mt-3 text-sm text-slate-500">
 
@@ -1199,7 +1364,7 @@ if (isGuidedTour && (!e.image_url || String(e.image_url).trim() === "")) {
 
                             {cta ? (
 
-                              <a
+                              <TrackedLink
 
                                 href={cta}
 
@@ -1207,13 +1372,17 @@ if (isGuidedTour && (!e.image_url || String(e.image_url).trim() === "")) {
 
                                 rel="noreferrer"
 
+                                eventId={e.id}
+
+                                clickSource="list_ticket"
+
                                 className="inline-flex h-10 items-center justify-center rounded-xl bg-sky-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-sky-700"
 
                               >
 
                                 Biljetter
 
-                              </a>
+                              </TrackedLink>
 
                             ) : null}
 
@@ -1224,18 +1393,21 @@ if (isGuidedTour && (!e.image_url || String(e.image_url).trim() === "")) {
                                 ? primaryCtaUrl({ ...e, ticket_url: null, organizer_url: e.source_url, source_url: null })
                                 : null;
                               return more ? (
-                                <a
+                                <TrackedLink
                                   href={more}
                                   target="_blank"
                                   rel="noreferrer"
+                                  eventId={e.id}
+                                  clickSource="list_more"
                                   className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50"
                                 >
                                   Läs mer
-                                </a>
+                                </TrackedLink>
                               ) : null;
                             })()}
 
                           </div>
+
 
                         </div>
 
