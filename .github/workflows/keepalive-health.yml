@@ -1,0 +1,17 @@
+name: Keepalive health ping
+
+on:
+  schedule:
+    - cron: "15 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ping live health route
+        run: |
+          curl -fsS -A "github-actions-keepalive" \
+            https://vadskavihittapå.nu/api/health
